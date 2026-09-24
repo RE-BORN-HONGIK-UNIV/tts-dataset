@@ -476,7 +476,7 @@ def report(rows):
     print("  1) _previews 폴더의 음원을 들어 외국인 억양 화자를 찾고,")
     print("     metadata.csv 의 lang_flag 열에 ko / foreign 을 기입")
     print("  2) audio 폴더의 wav 30개를 들어 정상 발화로 들리는지 확인")
-    print("  3) 위 분포 수치를 공유해 주시면 energy 변동 폭을 확정")
+    print("  3) 위 분포 수치를 통해 energy 변동 폭을 확정")
 
 
 if __name__ == "__main__":
