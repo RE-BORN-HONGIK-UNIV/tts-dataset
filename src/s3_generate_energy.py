@@ -14,7 +14,7 @@ s3_generate_energy.py  —  에너지 변동(energy) 클래스 데이터 생성
   보조 변이를 섞는 이유는 모델이 "단조 기울기"만 보고 판단하도록 과적합되는
   것을 막기 위해서다.
 
-[이전 버전(v4)에서 무엇을 왜 바꿨는가]
+[이전 버전(v4)에서 무엇을 왜 바꿨는가 - 발표 때 설명할 핵심]
   v4 는 문장을 4토막으로 쪼개 각 조각을 다른 target_lufs 로 따로 합성하고
   크로스페이드로 이어붙였다. 문제가 네 가지였다.
     1) 조각별 합성이라 운율이 끊기고, 이음새에 인위적 흔적이 남았다.
@@ -48,9 +48,9 @@ s3_generate_energy.py  —  에너지 변동(energy) 클래스 데이터 생성
     - TTS 원본 자체가 이미 갖고 있는 음량 기복
   라벨링과 임계값 검토에는 반드시 swing_db_measured 를 쓴다.
 
-[입력]  voice_candidates.csv  (s1 의 출력)
-[출력]  energy/v4/audio/energy_spk001_f_001.wav ...
-        energy/v4/metadata.csv
+[입력]  data/voice_candidates.csv  (s1 의 출력)
+[출력]  data/energy/v4/audio/energy_spk001_f_001.wav ...
+        data/energy/v4/metadata.csv
 
 [파일명 규칙]  {class}_{speaker_id}_{gender}_{seq}.wav
   seq 는 화자별 연번이다. 폴더를 정렬만 해도 화자별 개수가 눈에 보인다.
@@ -66,6 +66,7 @@ s3_generate_energy.py  —  에너지 변동(energy) 클래스 데이터 생성
 import os
 import io
 import csv
+import glob
 import time
 import random
 
@@ -80,11 +81,15 @@ load_dotenv()
 # ------------------------------------------------------------------
 # 0. 설정
 # ------------------------------------------------------------------
-# --- 저장 위치 (기존 reborn_tts_data 구조에 맞춤) --------------------
-# 과거 테스트 결과물은 밑줄을 붙여 보관한다(_test_batch1~3). 마스터 통합에서 제외된다.
-# 이번 생성분은 energy/v4/ 에 들어간다.
-DATA_ROOT = r"C:\reborn_tts_data"
-BATCH_NAME = "v4"   # energy/v4/ 에 저장. 기존 _test_batch1~3 과 구분된다
+# --- 저장 위치 -------------------------------------------------------
+# 데이터 폴더 위치
+#   코드 파일(src/)의 한 칸 위 = repo 폴더, 그 안의 data/ 를 쓴다.
+#   C:\... 같은 절대경로를 쓰지 않는 이유: repo 를 다른 곳(예: OneDrive 밖)으로
+#   옮겨도 코드를 고칠 필요가 없고, 어디서 실행하든 같은 폴더를 가리킨다.
+#   data/ 는 .gitignore 에 들어 있어 GitHub 에 올라가지 않는다(음성 용량 문제).
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_ROOT = os.path.join(REPO_ROOT, "data")
+BATCH_NAME = "v4"   # data/energy/v4/ 에 저장
 OUTPUT_DIR = os.path.join(DATA_ROOT, "energy", BATCH_NAME)
 CANDIDATES_CSV = os.path.join(DATA_ROOT, "voice_candidates.csv")  # s1 의 출력
 AUDIO_DIR = os.path.join(OUTPUT_DIR, "audio")
@@ -94,10 +99,11 @@ CLASS_NAME = "energy"     # metadata의 class 열 값 (prolong / energy / tremor
 SOURCE_TAG = "tts"
 
 # speaker_id 시작 번호.
-#  기존 organized\metadata.csv 에서 이미 spk001~spkNNN 을 쓰고 있으면
-#  겹치지 않게 그 다음 번호부터 시작해야 한다. 실행 시 자동 감지도 시도한다.
+#  data/ 아래 모든 metadata.csv(연장 83개 포함)를 읽어, 이미 쓰인 spkNNN 의
+#  다음 번호부터 부여한다. 번호가 겹치면 서로 다른 사람이 같은 화자로 묶여
+#  화자 단위 분할(train/val/test)이 망가지기 때문이다.
+#  밑줄 폴더(_pilot 등)는 학습 데이터가 아니므로 번호 계산에서 제외한다.
 SPEAKER_ID_START = 1
-EXISTING_META_FOR_SPK = os.path.join(DATA_ROOT, "organized", "metadata.csv")
 
 TARGET_COUNT = 200          # 1차 생성 개수
 NUM_VOICES_TO_USE = 8       # 중복 없이 확보할 청년 화자 수
@@ -291,33 +297,47 @@ def pick_young_voices(n: int):
     return out
 
 
-def next_speaker_number() -> int:
+def _existing_meta_files():
+    """data/ 아래 학습용 metadata.csv 목록 (밑줄로 시작하는 폴더는 제외)."""
+    out = []
+    for p in glob.glob(os.path.join(DATA_ROOT, "**", "metadata.csv"), recursive=True):
+        rel = os.path.relpath(p, DATA_ROOT)
+        if any(part.startswith("_") for part in rel.split(os.sep)[:-1]):
+            continue
+        out.append(p)
+    return sorted(out)
+
+
+def next_speaker_number():
     """
-    기존 organized/metadata.csv 에 쓰인 spkNNN 을 읽어 그 다음 번호를 반환.
-    파일이 없으면 SPEAKER_ID_START 를 쓴다.
-    (같은 성우를 다시 뽑았다면 voice_name 으로 매칭해 같은 번호를 재사용한다.)
+    data/ 아래 모든 학습용 metadata.csv 에 쓰인 spkNNN 을 모아 다음 번호를 반환.
+    예: 연장(prolong)이 spk001~spk012 를 쓰고 있으면 spk013 부터 시작한다.
+    같은 성우를 다시 뽑은 경우에는 voice_name 으로 찾아 같은 번호를 재사용한다.
+    (같은 사람 = 같은 번호여야 클래스 x 화자 교차표와 화자 단위 분할이 정확하다)
     """
-    if not os.path.exists(EXISTING_META_FOR_SPK):
-        return SPEAKER_ID_START
     used, name_map = [], {}
-    with open(EXISTING_META_FOR_SPK, newline="", encoding="utf-8") as f:
-        for r in csv.DictReader(f):
-            sid = (r.get("speaker_id") or "").strip()
-            if sid.startswith("spk") and sid[3:].isdigit():
-                used.append(int(sid[3:]))
-                nm = (r.get("voice_name") or "").strip()
-                if nm:
-                    name_map[nm] = sid
+    files = _existing_meta_files()
+    for path in files:
+        with open(path, newline="", encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                sid = (r.get("speaker_id") or "").strip()
+                if sid.startswith("spk") and sid[3:].isdigit():
+                    used.append(int(sid[3:]))
+                    nm = (r.get("voice_name") or "").strip()
+                    if nm:
+                        name_map[nm] = sid
     next_no = (max(used) + 1) if used else SPEAKER_ID_START
-    print(f"[speaker_id] 기존 메타에서 최대 spk{max(used):03d} 감지 -> spk{next_no:03d} 부터 부여"
-          if used else f"[speaker_id] 기존 메타 없음 -> spk{next_no:03d} 부터 부여")
+    if used:
+        print(f"[speaker_id] 기존 메타 {len(files)}개에서 최대 spk{max(used):03d} 감지 "
+              f"-> spk{next_no:03d} 부터 부여")
+    else:
+        print(f"[speaker_id] 기존 메타 없음 -> spk{next_no:03d} 부터 부여")
     return next_no, name_map
 
 
 def assign_speaker_ids(voices):
     """뽑힌 화자들에게 spkNNN 을 부여. 기존 메타에 같은 성우가 있으면 번호 재사용."""
-    res = next_speaker_number()
-    start, name_map = res if isinstance(res, tuple) else (res, {})
+    start, name_map = next_speaker_number()
     n = start
     for v in voices:
         reused = name_map.get(v["name"])
@@ -478,7 +498,7 @@ def make_sample(text: str, voice: dict, pattern: str, seq: int):
     sf.write(os.path.join(AUDIO_DIR, fname), y, sr)
 
     return {
-        # --- organized/metadata.csv 와 공통 열 (나중에 그대로 합칠 수 있게) ---
+        # --- 연장(prolong) metadata.csv 와 공통 열 (나중에 그대로 합칠 수 있게) ---
         "new_filename": fname,
         "old_filename": "",
         "class": CLASS_NAME,
@@ -509,7 +529,7 @@ def make_sample(text: str, voice: dict, pattern: str, seq: int):
 # 6. 실행부 (이어받기 지원)
 # ------------------------------------------------------------------
 META_FIELDS = [
-    # organized/metadata.csv 와 동일한 앞부분 (연장 데이터와 합치기 쉽게)
+    # 연장 metadata.csv 와 동일한 앞부분 (합치기 쉽게)
     "new_filename", "old_filename", "class", "speaker_id", "gender", "speaker_f0_hz",
     "gender_flag", "source", "voice_name", "text_script", "qc_pass", "cluster_raw",
     "is_representative",

@@ -48,10 +48,10 @@ s2_generate_normal_pilot.py  —  정상(normal) 음성 30개 파일럿 + 변동
   밑줄로 시작하는 폴더를 건너뛰므로, 마스터 메타데이터에 섞이지 않는다.
   그래도 CSV 는 남긴다. 임계값을 정한 근거 자료이므로 논문·발표에 필요하다.
 
-[입력]  voice_candidates.csv  (s1 의 출력)
-[출력]  _pilot_normal30/audio/normal_spkP01_f_001.wav ...
-        _pilot_normal30/metadata.csv
-        _pilot_normal30/_previews/    화자별 미리듣기 음원
+[입력]  data/voice_candidates.csv  (s1 의 출력)
+[출력]  data/_pilot_normal30/audio/normal_spkP01_f_001.wav ...
+        data/_pilot_normal30/metadata.csv
+        data/_pilot_normal30/_previews/    화자별 미리듣기 음원
         콘솔에 swing_db / trend_db 분포 히스토그램
 
 [화자 ID 규칙]
@@ -96,7 +96,13 @@ load_dotenv()
 # ------------------------------------------------------------------
 SCRIPT_VERSION = "pilot_v4"       # metadata 에 기록됨
 
-DATA_ROOT = r"C:\reborn_tts_data"
+# 데이터 폴더 위치
+#   코드 파일(src/)의 한 칸 위 = repo 폴더, 그 안의 data/ 를 쓴다.
+#   C:\... 같은 절대경로를 쓰지 않는 이유: repo 를 다른 곳(예: OneDrive 밖)으로
+#   옮겨도 코드를 고칠 필요가 없고, 어디서 실행하든 같은 폴더를 가리킨다.
+#   data/ 는 .gitignore 에 들어 있어 GitHub 에 올라가지 않는다(음성 용량 문제).
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_ROOT = os.path.join(REPO_ROOT, "data")
 CANDIDATES_CSV = os.path.join(DATA_ROOT, "voice_candidates.csv")
 
 OUT_DIR = os.path.join(DATA_ROOT, "_pilot_normal30")   # 밑줄 = 마스터 제외

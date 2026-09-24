@@ -41,7 +41,7 @@ s1_check_voices.py  —  Typecast 화자 조회 및 조건 필터링 (읽기 전
   다음 단계(02)에서 미리듣기 음원을 듣고 걸러낸다.
 
 [입력]  없음 (.env 의 TYPECAST_API_KEY 만 필요)
-[출력]  voice_candidates.csv
+[출력]  data/voice_candidates.csv
           excluded_by 열이 빈 행 = 사용 가능한 화자
           이후 모든 생성 스크립트가 이 CSV 를 읽는다. API 를 매번 다시 조회하지
           않으므로 "어떤 화자 풀로 만든 데이터인가"가 기록으로 남는다.
@@ -81,7 +81,15 @@ EXCLUDE_USE_CASES = ["rapper"]
 # 2차 후보(과장된 캐릭터 발성 우려). 인원이 충분하면 이것도 빼는 걸 검토.
 CANDIDATE_EXTRA_EXCLUDE = ["anime", "game"]
 
-OUT_CSV = "voice_candidates.csv"
+# 데이터 폴더 위치
+#   코드 파일(src/)의 한 칸 위 = repo 폴더, 그 안의 data/ 를 쓴다.
+#   C:\... 같은 절대경로를 쓰지 않는 이유: repo 를 다른 곳(예: OneDrive 밖)으로
+#   옮겨도 코드를 고칠 필요가 없고, 어디서 실행하든 같은 폴더를 가리킨다.
+#   data/ 는 .gitignore 에 들어 있어 GitHub 에 올라가지 않는다(음성 용량 문제).
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_ROOT = os.path.join(REPO_ROOT, "data")
+# 결과 명단. s2·s3 가 이 파일을 읽어 화자를 뽑는다.
+OUT_CSV = os.path.join(DATA_ROOT, "voice_candidates.csv")
 
 # 공식 문서 기준 use_cases 전체 13종
 ALL_USE_CASES = [
@@ -223,6 +231,7 @@ def main():
     # 명단 저장
     fields = ["voice_id", "voice_name", "gender", "age", "voice_type",
               "use_cases", "emotions", "excluded_by"]
+    os.makedirs(DATA_ROOT, exist_ok=True)   # 처음 실행이면 data/ 폴더 생성
     with open(OUT_CSV, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
@@ -255,9 +264,7 @@ def main():
         print(f"   {v.get('voice_name','?'):<20}{str(v.get('gender','')):<9}"
               f"{'|'.join(norm_use_cases(v))}")
 
-    print("\n" + "=" * 74)
-    print(" 이 출력을 그대로 붙여주시면 몇 명으로 갈지, 어떤 태그까지 뺄지 함께 정하겠습니다.")
-    print("=" * 74)
+ 
 
 
 def use_cases_str(v):

@@ -34,9 +34,9 @@ s4_build_master_metadata.py  —  배치별 메타데이터를 마스터 한 장
   또한 학습/검증/테스트 분할은 반드시 화자 단위로 해야 한다. 같은 화자가
   분할을 넘나들면 성능이 과대평가된다.
 
-[입력]  DATA_ROOT 아래의 모든 metadata.csv (밑줄 폴더 제외)
-[출력]  master_metadata.csv          전체 한 장, 클래스별 정렬
-        by_class/{class}.csv         클래스별 분리본 (눈으로 확인할 때 편함)
+[입력]  data/ 아래의 모든 metadata.csv (밑줄 폴더 제외)
+[출력]  data/master_metadata.csv          전체 한 장, 클래스별 정렬
+        data/by_class/{class}.csv         클래스별 분리본 (눈으로 확인할 때 편함)
         콘솔에 클래스별 개수 + 클래스 x 화자 교차표 + 누락 wav 경고
 
 [열 구성]
@@ -54,13 +54,19 @@ import csv
 import glob
 from collections import defaultdict
 
-DATA_ROOT = r"C:\reborn_tts_data"
+# 데이터 폴더 위치
+#   코드 파일(src/)의 한 칸 위 = repo 폴더, 그 안의 data/ 를 쓴다.
+#   C:\... 같은 절대경로를 쓰지 않는 이유: repo 를 다른 곳(예: OneDrive 밖)으로
+#   옮겨도 코드를 고칠 필요가 없고, 어디서 실행하든 같은 폴더를 가리킨다.
+#   data/ 는 .gitignore 에 들어 있어 GitHub 에 올라가지 않는다(음성 용량 문제).
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_ROOT = os.path.join(REPO_ROOT, "data")
 
-# 읽어올 metadata.csv 위치들. 새 배치가 생기면 여기에 추가만 하면 된다.
+# 읽어올 metadata.csv 위치. data/ 아래를 깊이 상관없이 전부 찾는다.
+#   data/prolong/metadata.csv, data/energy/v4/metadata.csv, data/normal/v4/metadata.csv ...
+# 새 배치 폴더가 생겨도 여기를 고칠 필요가 없다. (밑줄 폴더는 아래에서 제외)
 SOURCE_GLOBS = [
-    os.path.join(DATA_ROOT, "organized", "metadata.csv"),      # 기존 클러스터링 결과
-    os.path.join(DATA_ROOT, "*", "*", "metadata.csv"),         # energy\batch2_api\metadata.csv 등
-    os.path.join(DATA_ROOT, "*", "metadata.csv"),
+    os.path.join(DATA_ROOT, "**", "metadata.csv"),
 ]
 
 MASTER_PATH = os.path.join(DATA_ROOT, "master_metadata.csv")
@@ -104,7 +110,7 @@ def is_excluded_path(path: str) -> bool:
 def find_sources():
     paths, seen, skipped = [], set(), []
     for pattern in SOURCE_GLOBS:
-        for p in glob.glob(pattern):
+        for p in glob.glob(pattern, recursive=True):
             rp = os.path.normpath(p)
             if rp in seen or os.path.basename(rp) != "metadata.csv":
                 continue

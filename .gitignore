@@ -1,17 +1,9 @@
 # API 키 - 절대 커밋하지 않는다
 .env
 
-# 생성된 음성 데이터와 메타데이터 (용량이 크고 재생성 가능)
-*.wav
-*.mp3
-voice_candidates.csv
-master_metadata.csv
-metadata.csv
-by_class/
-_pilot_normal30/
-_previews/
-_test_batch*/
-_archive*/
+# 데이터 폴더 전체 (음성 wav, 명단·메타데이터 csv)
+#   음성은 용량이 커서 GitHub 에 올리지 않는다. 코드만 있으면 다시 만들 수 있다.
+data/
 
 # 파이썬
 __pycache__/
