@@ -1,19 +1,120 @@
-# API 키 - 절대 커밋하지 않는다
+# ============================================================
+# Secrets / API keys
+# ============================================================
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+service_account.json
 
-# 데이터 폴더 전체 (음성 wav, 명단·메타데이터 csv)
-#   음성은 용량이 커서 GitHub 에 올리지 않는다. 코드만 있으면 다시 만들 수 있다.
-data/
 
-# 파이썬
+# ============================================================
+# Private and large data
+# 실제 원본 음성, 개인정보 가능성이 있는 명단·메타데이터는 GitHub에 올리지 않는다.
+# data/README.md와 data/.gitkeep만 예외로 남긴다.
+# ============================================================
+data/*
+!data/README.md
+!data/.gitkeep
+
+# data/ 폴더 밖에 실수로 저장한 대용량 음성도 제외
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.ogg
+*.aac
+
+# 개인정보가 포함될 가능성이 높은 원본 스프레드시트
+*.xlsx
+*.xls
+
+
+# ============================================================
+# Model weights / checkpoints
+# ============================================================
+models/
+checkpoints/
+weights/
+artifacts/
+
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.keras
+*.onnx
+*.tflite
+*.pkl
+*.joblib
+
+
+# ============================================================
+# Training logs / experiment outputs
+# ============================================================
+runs/
+logs/
+outputs/
+predictions/
+results/generated/
+
+tensorboard/
+wandb/
+mlruns/
+lightning_logs/
+
+# Feature cache, embeddings, prediction arrays
+*.npy
+*.npz
+*.memmap
+
+
+# ============================================================
+# Python
+# ============================================================
 __pycache__/
 *.py[cod]
+*$py.class
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
 .venv/
 venv/
+env/
+ENV/
+
+
+# ============================================================
+# Colab / Jupyter
+# notebooks/*.ipynb 자체는 GitHub에 남긴다.
+# ============================================================
 .ipynb_checkpoints/
 
-# 에디터 / OS
+
+# ============================================================
+# Local configuration
+# ============================================================
+config.local.yaml
+config.local.yml
+config.local.json
+
+
+# ============================================================
+# Editor / IDE / OS
+# ============================================================
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+
 .DS_Store
 Thumbs.db
+Desktop.ini

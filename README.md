@@ -1,237 +1,379 @@
-# tts-dataset
+# Interview Speech Disfluency Detection
 
-고립청년 대면훈련 서비스의 **면접 음성 분석 모델 학습 데이터 생성 코드**.
-Typecast TTS API로 정상·이상 발화 음성을 합성하고, 클래스·화자 라벨이 정확한 메타데이터를
-함께 기록한다.
+> 고립청년 대상 대면 면접훈련 서비스의 음성 분석 연구 모듈
 
-서비스 코드가 아니라 **데이터 생성 전용 리포지토리**다.
-(서비스 구현은 `backend` / `frontend`, 모델 서빙은 `ai-agent`)
+면접 연습 중 나타나는 음성 비유창성 및 발화 특성을 분석하여, 사용자가 자신의 말하기 패턴을 돌아보고 훈련할 수 있도록 돕는 프로젝트입니다.
 
-## 파일 이름 규칙
+이 저장소는 다음 연구 흐름을 관리합니다.
 
-- `src/sN_...` : 데이터를 **만드는** 파이프라인. `N`은 실행 순서(s1 → s2 → s3 → s4).
-- `tools/...`  : 데이터를 **검사하는** 도구. 실행 순서에 속하지 않고 필요할 때 반복 실행하므로 번호가 없다.
-
-`s`는 step의 약자다. `01_...`처럼 숫자로 시작하면 파이썬 모듈로 import 할 수 없기 때문에
-문자로 시작한다. 나중에 함수를 재사용할 때 `from src.s3_generate_energy import ...` 형태로
-그대로 불러 쓸 수 있다.
+```text
+실제 일반인 음성 라벨
++ 합성 TTS 음성 생성
+→ 에너지변동 fade-in / fade-out 반자동 세분화
+→ 실제·합성 음성 공동학습
+→ 화자 독립 실제 음성 평가
+```
 
 ---
 
-## 무엇을 만드는가
+## 1. 프로젝트 목표
 
-CNN으로 분류할 네 가지 클래스 중 코드로 합성할 수 있는 클래스를 생성한다.
+본 프로젝트는 고립청년의 대면 면접 준비를 지원하는 훈련 서비스의 1단계 음성 분석 모듈을 개발합니다.
 
-| 클래스 | 뜻 | 만드는 방법 |
+분석 대상은 다음과 같습니다.
+
+- 채움말(filler)
+- 멈춤(pause)
+- 연장(prolongation)
+- 떨림(tremor)
+- 에너지변동(energy variation)
+
+채움말과 멈춤은 규칙 기반 분석을 우선 적용합니다. 연장, 떨림, 에너지변동은 음향 특징 기반 CNN 분류 모델로 탐지합니다.
+
+> 이 모델은 의학적·임상적 진단을 수행하지 않습니다. 면접 훈련 상황에서 관찰되는 말하기 특성을 사용자에게 전달하는 보조 피드백 도구입니다.
+
+---
+
+## 2. 연구 질문
+
+본 프로젝트는 다음 질문에 답하는 것을 목표로 합니다.
+
+1. 실제 음성 데이터가 적은 환경에서 합성 음성이 음성 비유창성 탐지에 도움이 되는가?
+2. 실제 `energy_variation` 구간을 `fade_in`과 `fade_out`으로 반자동 세분화할 수 있는가?
+3. 합성·실제 데이터를 함께 학습할 때, 화자 독립 실제 음성 평가에서 일반화 성능이 개선되는가?
+4. 실제 음성과 합성 음성의 비율 및 sampling 방식이 모델 성능에 어떤 영향을 주는가?
+
+---
+
+## 3. 데이터와 라벨
+
+### 3.1 실제 일반인 음성
+
+실제 일반인 음성은 서비스가 동작해야 하는 목표 도메인입니다. 현재 데이터는 화자 ID(`speaker_id`)와 다음 상위 라벨을 포함합니다.
+
+```text
+normal
+prolongation
+tremor
+energy_variation
+```
+
+`energy_variation`은 후속 반자동 라벨링을 통해 아래 방향 라벨로 확장합니다.
+
+```text
+normal_energy
+energy_fade_in
+energy_fade_out
+energy_ambiguous
+recording_issue
+```
+
+| 라벨 | 설명 | 초기 3클래스 에너지 모델 사용 여부 |
 |---|---|---|
-| `normal` | 정상 발화 | TTS 원본 그대로 (후처리 없음) |
-| `prolong` | 연장 (말을 늘여 끄는 것) | 이전 작업분 83개를 가져옴 — 이 리포지토리에서 생성하지 않음 |
-| `energy` | 에너지 변동 | TTS 원본 + 연속 게인 엔벨로프 |
-| `tremor` | 떨림 | 추후 |
+| `normal_energy` | 뚜렷한 단조 에너지 상승·하강이 없는 발화 | 사용 |
+| `energy_fade_in` | 발화 전반부보다 후반부 에너지가 전반적으로 증가 | 사용 |
+| `energy_fade_out` | 발화 전반부보다 후반부 에너지가 전반적으로 감소 | 사용 |
+| `energy_ambiguous` | 변화는 있으나 방향을 신뢰성 있게 판단하기 어려움 | 제외·보류 |
+| `recording_issue` | 잡음, clipping, 마이크 변화 등으로 판단이 어려움 | 제외 |
 
-`energy`(에너지 변동)는 면접 중 **자신감 변화로 음량이 한 방향으로 흐르는 현상**이다.
-문장이 갈수록 작아지거나(fade out), 작게 시작했다가 커지는(fade in) 경우가 해당한다.
+### 3.2 합성 TTS 음성
 
-채움말·멈춤 검출은 파이썬 규칙 기반이라 별도 트랙이다. 이 리포지토리는 CNN 학습용
-합성 데이터(연장·에너지변동·떨림)와 그 비교 기준인 정상 발화를 다룬다.
+합성 데이터는 부족한 실제 데이터를 보완하고, 명확한 에너지 변화 방향을 가진 사례를 공급하기 위해 생성합니다.
+
+```text
+normal_energy
+energy_fade_in
+energy_fade_out
+```
+
+합성 음성은 실제 음성의 대체물이 아닙니다. 합성 음성은 사전학습과 데이터 증강에 사용하고, 최종 모델의 성능은 실제 음성으로 평가합니다.
 
 ---
 
-## 실행 순서
+## 4. 에너지변동 세분화
 
+실제 데이터의 `energy_variation`은 방향 라벨이 없으므로, 다음 반자동 절차를 거쳐 `fade_in`, `fade_out`, `ambiguous`로 세분화합니다.
+
+```text
+기존 energy_variation 구간
+→ VAD 기반 유성 구간 확인
+→ RMS/log-energy 궤적 추출 및 평활화
+→ 전반부·후반부 에너지 차이 및 회귀 기울기 계산
+→ fade_in / fade_out / ambiguous 후보 생성
+→ 복수 청취자의 블라인드 검증
+→ 고신뢰 최종 라벨 확정
 ```
-pip install -r requirements.txt
-cp .env.example .env        # .env 안에 TYPECAST_API_KEY 입력
 
-python src/s1_check_voices.py             # 화자 풀 확정 (크레딧 소모 없음)
-python src/s2_generate_normal_pilot.py    # 정상 30개 파일럿
-python tools/measure_energy_envelope.py   # 정상군 엔벨로프 분포 측정 (크레딧 소모 없음)
-   -> 이 분포를 기준으로 s3의 변동 폭을 확정한다
-python src/s3_generate_energy.py          # 에너지 변동 데이터 생성
-python tools/measure_energy_envelope.py --dir data/energy/v4   # 정상군과 분리되는지 검증
-python src/s4_build_master_metadata.py    # 메타데이터 통합
-```
+자동 분석은 최종 정답을 생성하는 도구가 아니라, 사람이 검토할 후보를 효율적으로 찾는 도구입니다.
 
-모든 명령은 repo 최상위 폴더(`tts-dataset/`)에서 실행한다.
-각 파일 맨 위 주석에 **왜 그렇게 했는지**가 정리돼 있다.
+- 최소 2명, 가능하면 3명의 청취자가 독립적으로 판단합니다.
+- 자동 후보 라벨은 청취자에게 사전에 제공하지 않습니다.
+- 의견이 일치하지 않거나 비단조적인 변화는 `energy_ambiguous`로 보류할 수 있습니다.
+- `recording_issue`는 별도 관리하고 학습·평가에서 제외합니다.
 
-| 파일 | 역할 |
-|---|---|
-| `src/s1_check_voices.py` | Typecast 화자 목록 조회, 조건 필터, `voice_candidates.csv` 출력 |
-| `src/s2_generate_normal_pilot.py` | 정상 30개 생성 + 미리듣기 다운로드 |
-| `src/s3_generate_energy.py` | 에너지 변동 클래스 생성 (게인 엔벨로프 방식) |
-| `src/s4_build_master_metadata.py` | 배치별 CSV를 클래스별 정렬 마스터 한 장으로 통합 |
-| `tools/measure_energy_envelope.py` | wav 폴더의 문장 단위 음량 흐름 측정 (`trend_db`, `slope_db_per_s`, `env_range_db`) |
+### 잠정 판정 정의
+
+에너지 추세는 아래 값으로 계산합니다.
+
+\[
+\Delta E_{dB} = \overline{E}_{\text{후반부}} - \overline{E}_{\text{전반부}}
+\]
+
+\[
+E(t) = \beta_0 + \beta_1 t + \epsilon
+\]
+
+- \(\Delta E_{dB} > 0\), \(\beta_1 > 0\): `fade_in` 후보
+- \(\Delta E_{dB} < 0\), \(\beta_1 < 0\): `fade_out` 후보
+- 방향이 약하거나 지표 간 방향이 불일치: `ambiguous` 후보
+
+> 특정 dB 차이 또는 기울기 값은 아직 보편적·학술적으로 확정된 실제 발화 판정 임계값이 아닙니다. 합성 음성의 변화량은 합성 강도 제어값일 뿐입니다. 실제 음성 라벨링 파일럿에서 사람 청취 결과와 음향 특징을 비교하여 프로젝트 내부의 잠정 기준을 설정합니다.
 
 ---
 
-## 설계 원칙
+## 5. 학습과 평가 원칙
 
-### 1. 화자 수가 데이터 개수보다 중요하다
-화자 5명으로 1,200개를 만들면 모델이 그 5명의 목소리를 외운다(speaker overfitting).
-그래서 생성 전에 조건에 맞는 화자를 먼저 세고(`s1`), 남녀 균형을 맞춰 뽑는다.
-학습/검증/테스트 분할도 **화자 단위**로 한다. 같은 화자가 분할을 넘나들면
-성능이 과대평가된다.
+### 5.1 실제·합성 공동학습
 
-### 2. 정상군도 같은 TTS로 만든다
-정상군을 실제 녹음으로 구하면 마이크 특성·배경 잡음이 클래스와 완벽하게 상관되어,
-모델이 "합성음이냐 실제 녹음이냐"를 학습한다. 같은 화자·같은 문장·같은
-`target_lufs`로 생성하면 두 클래스의 차이가 음량 변동 하나로 통제된다.
+데이터가 부족하므로 실제와 합성 데이터를 모두 학습에 사용합니다.
 
-다만 합성 데이터가 새로운 편향을 도입·증폭할 수 있다는 지적이 있으므로
-([Computational Linguistics](https://direct.mit.edu/coli/article/51/1/191/124625/Evaluating-Synthetic-Data-Generation-from-User)),
-최종 평가는 실제 사용자 음성으로 해야 한다.
+```text
+Training data
+= 고신뢰 실제 train 데이터
++ 합성 normal / fade_in / fade_out 데이터
+```
 
-### 3. 문장은 한 번에 합성하고, 변동은 후처리로 준다
-문장을 토막내 따로 합성한 뒤 이어붙이면 이음새 아티팩트가 남아, CNN이 에너지 변동이
-아니라 그 흔적을 학습한다. 전체를 한 번에 합성해 운율을 보존하고, 변동은 numpy에서
-연속 코사인 게인 엔벨로프로 부여한다. 패딩·복사는 쓰지 않는다.
+권장 학습 흐름은 다음과 같습니다.
 
-### 4. 라벨은 목표값이 아니라 실측값을 쓴다
-부여한 변동 폭(target)과 실제 측정값(measured)은 다르다. TTS 원본 자체에도 음량 기복이
-있기 때문이다. **임계값 검토와 라벨링에는 실측값을 쓴다.**
+```text
+1. 합성 데이터 사전학습
+2. 합성 + 실제 train 데이터 공동학습
+3. 필요 시 실제 train 데이터만으로 저학습률 fine-tuning
+4. 실제 validation 성능으로 모델·threshold 선택
+5. 실제 test에서 최종 성능 평가
+```
 
-### 5. 측정 지표는 "문장 단위 흐름"을 재야 한다
-파일럿(s2)에서 처음 쓴 `swing_db`는 50ms 프레임의 최대/최소 비였다. 결과는 30개 전부
-20.8~26.0 dB에 몰렸고, 최대값 25.99 dB는 정의상 천장인 \(20\log_{10}(1/0.05) = 26.02\) dB에
-붙어 있었다(무음 제거 기준이 "최대의 5% 미만"이므로 최대/최소 비가 20을 넘을 수 없음).
+### 5.2 화자 독립 데이터 분할
 
-50ms는 음절보다 짧아서 모음과 자음·단어 사이 틈의 차이를 재게 된다. 즉 이 지표는
-"문장이 점점 작아지는가"가 아니라 "음절이 얼마나 출렁이는가"를 쟀고, 에너지 변동을
-준 클립도 같은 천장에 붙으므로 클래스를 구분할 수 없다.
+실제 데이터는 파일 단위가 아니라 **화자 단위**로 분할합니다.
 
-그래서 `tools/measure_energy_envelope.py`에서 지표를 새로 정의했다.
+```text
+Real train       : 학습용 실제 화자
+Real validation  : 모델 선택용 실제 화자
+Real test        : 최종 평가용 실제 화자
+Synthetic train  : 합성 데이터
+```
 
-| 지표 | 정의 | 용도 |
+같은 화자의 발화가 train과 validation/test에 겹치지 않도록 합니다. 이는 모델이 음향 현상 대신 특정 화자의 음색, 발화 습관, 마이크 조건을 외워 성능이 과대평가되는 data leakage를 막기 위함입니다.
+
+### 5.3 평가 데이터 원칙
+
+```text
+합성 데이터: train에만 사용
+실제 validation: 모델 선택과 threshold 결정에 사용
+실제 test: 최종 성능 보고에만 사용
+```
+
+최종 성능은 실제 test 화자 데이터에서 측정합니다.
+
+### 5.4 초기 에너지 모델
+
+초기 에너지 방향 분류 모델은 다음 3개 클래스를 출력합니다.
+
+```text
+normal_energy
+energy_fade_in
+energy_fade_out
+```
+
+실제 데이터에 방향 라벨이 아직 충분하지 않을 때는 아래와 같이 이진 성능도 평가합니다.
+
+\[
+P(\text{energy_variation})
+= P(\text{energy_fade_in}) + P(\text{energy_fade_out})
+\]
+
+```text
+normal vs energy_variation
+```
+
+`fade_in`과 `fade_out`의 방향별 정확도는 실제 방향 라벨이 사람 검증을 통해 확보된 후에만 보고합니다.
+
+---
+
+## 6. 실제·합성 비율 전략
+
+초기 단계에서는 실제·합성 데이터를 모두 사용하는 전량 혼합 baseline을 먼저 구축합니다.
+
+단, 합성 데이터가 실제 데이터보다 매우 많을 때는 실제 데이터가 업데이트 과정에서 묻히지 않도록 source-balanced mini-batch를 비교합니다.
+
+```text
+잠정 운영값: 실제 50% + 합성 50% per mini-batch
+```
+
+위 1:1 비율은 학술적 최적값이 아니라 합성 데이터 과대표집을 막기 위한 **잠정 운영값**입니다. 실제 validation 성능을 보고 유지·변경합니다.
+
+또한 아래 두 균형은 별개로 관리합니다.
+
+```text
+source balance: 실제 / 합성 비율
+class balance : normal / fade_in / fade_out 비율
+```
+
+---
+
+## 7. 최소 실험 설계
+
+| ID | 학습 데이터 | 목적 |
 |---|---|---|
-| `trend_db` | 유성 프레임 뒤 25% 평균 dB − 앞 25% 평균 dB | fade_out / fade_in |
-| `slope_db_per_s` | (시각, dB)에 맞춘 직선 기울기 | 길이가 다른 클립 비교 |
-| `env_range_db` | 0.5초 이동평균으로 평활한 dB 곡선의 최대 − 최소 | swell / dip |
+| E1 | 합성 데이터만 | 합성 학습 패턴의 실제 음성 전이 성능 확인 |
+| E2 | 실제 데이터만 | 소량 실제 데이터 기준선 확인 |
+| E3 | 실제 + 합성 전량 혼합 | 기본 모델 및 전량 활용 전략 확인 |
+| E4 | 실제 + 합성 + source-balanced batch | 합성 과대표집 영향 확인 |
 
-기존 `swing_db`는 `legacy_swing_db`로 함께 계산해 천장 문제를 수치로 남긴다.
-합성 사인파 검증에서는 드러나지 않았고 실제 음성 파일럿에서 발견된 문제다.
-본 생성 전에 파일럿을 두는 이유다.
+모든 실험은 동일한 실제 validation/test 화자 분할에서 비교합니다.
 
-### 6. 임계값은 근거 없이 정하지 않는다
-정상 발화에도 음량이 줄어드는 경향이 원래 있다. 발화가 진행되며 F0와 강도가 함께
-감소하는 declination은 언어 보편적 경향으로 보고되며
-([Lieberman 인용, Antwerp](https://repository.uantwerpen.be/docman/irua/0b0ce0/154885.pdf)),
-평서문은 종결부 음절에서 dB SPL이 급격히 떨어지는 것이 특징으로 기술된다
-([University of Alberta](https://era.library.ualberta.ca/items/a14f3137-5fe8-46bb-a6a0-dbf7d48c1a8f/download/61497a8d-33b7-477d-93a2-15dfabac3338)).
-발화 말/비말 음절의 강도 비는 1.33~5.76 dB로 보고됐다
-([PMC3212410](https://pmc.ncbi.nlm.nih.gov/articles/PMC3212410/)).
-
-파일럿 정상군(s2 정의 `trend_db`)도 평균 −2.46 dB, 범위 −7.00 ~ +0.72 dB,
-30개 중 27개(90%)가 뒤로 갈수록 작아져 declination과 같은 방향을 보였다.
-
-**단, 선행 연구 수치를 그대로 임계값으로 쓸 수는 없다.** 선행 연구는 종결 음절 대
-비종결 음절을 비교하고, 우리 지표는 문장 앞 1/4과 뒤 1/4을 비교한다. 구간 정의가 달라
-직접 전이가 불가능하다. 그래서 정상군 분포를 실측한 뒤 임계값을 정한다.
-현재 `s3`의 `SWING_DB_RANGE = (10.0, 20.0)`과 측정 도구의 `VOICED_RANGE_DB = 30`,
-`SMOOTH_SEC = 0.5`는 **잠정값**이다.
-
-### 7. 화자는 한국어 합성 음성을 듣고 판정한다
-태그(`use_cases`)로는 부적합 화자를 걸러낼 수 없었다. 파일럿 10명 판정 결과
-(2026-09-24):
-
-| 화자 | 태그 | 판정 |
-|---|---|---|
-| Buttaguy | Conversational | 제외 — 캐릭터형 발성 |
-| Jabbaba | TikTok/Reels/Shorts | 제외 — 캐릭터형 발성 |
-| Ravi, Zoey | E-learning, Radio/Podcast 등 | 사용 — 미리듣기는 영어였으나 한국어 합성은 자연스러움 |
-| 나머지 6명 | | 사용 |
-
-미리듣기 음원은 Typecast가 정한 샘플 문장이라 언어가 다를 수 있다.
-**판정은 우리가 한국어로 합성한 음성으로 한다.**
+- 실험 설정 선택은 실제 validation 성능을 기준으로 합니다.
+- 최종안이 결정된 뒤 실제 test를 사용합니다.
+- test 결과를 보고 모델 구조나 threshold를 반복적으로 변경하지 않습니다.
 
 ---
 
-## 데이터 구조
+## 8. 평가 지표
 
-코드와 데이터가 한 repo 폴더 안에 있고, `data/`만 GitHub에서 제외된다.
-코드는 경로를 절대경로(`C:\...`)가 아니라 "코드 파일 기준 한 칸 위의 `data/`"로
-찾기 때문에 repo 폴더를 어디로 옮겨도 그대로 동작한다.
+에너지변동 탐지 및 방향 분류에서 다음 지표를 사용합니다.
 
-```
-tts-dataset/
-  src/                          생성 파이프라인           ← GitHub
-  tools/                        검사 도구                ← GitHub
-  README.md, requirements.txt, .gitignore               ← GitHub
-  .env                          API 키                  ← 제외
-  data/                         음성·명단·메타데이터     ← 제외 (.gitignore)
-    voice_candidates.csv        s1 출력. 생성 스크립트가 이 명단에서 화자를 뽑는다
-    prolong/                    연장 83개 (이전 작업분)
-      audio/  metadata.csv
-    normal/v4/                  정상 클래스
-    energy/v4/                  에너지 변동
-    tremor/                     떨림 (추후)
-    _pilot_normal30/            측정용 파일럿 (학습 제외)
-      audio/  _previews/  metadata.csv  envelope_metrics.csv
-    master_metadata.csv         s4 출력
-    by_class/{class}.csv        s4 출력, 클래스별 분리본
-```
+- Precision
+- Recall
+- F1-score
+- PR-AUC
+- ROC-AUC
+- Confusion matrix
 
-연장 83개는 이전 작업 폴더(`C:\reborn_tts_data\organized\`)에서 화자 클러스터링을
-마친 결과를 복사해 온 것이다. 원본은 이전 폴더에 보관한다.
-
-`metadata.csv`는 모든 폴더에서 **같은 이름**을 쓴다. 어느 클래스인지는 폴더로
-구분한다. s4는 이 이름으로 파일을 찾아 모으고, s3는 이 파일들에서 이미 쓰인
-화자 번호를 읽어 겹치지 않는 다음 번호를 매긴다.
-
-### 밑줄 규칙
-**이름이 밑줄(`_`)로 시작하는 폴더는 마스터 통합에서 제외된다.**
-폴더 이름만 보고 학습용인지 실험용인지 구분하기 위한 장치다.
-제외된 폴더도 CSV는 남긴다. 임계값을 정한 근거 자료라 발표·논문에 필요하다.
-
-### 파일명 규칙
-```
-{class}_{speaker_id}_{gender}_{seq}.wav
-
-energy_spk009_f_001.wav     본 생성
-normal_spkP01_m_003.wav     파일럿 (P를 붙여 본 생성 번호와 구분)
-```
-`seq`는 화자별 연번이라 폴더를 정렬만 해도 화자별 개수가 보인다.
-API로 생성하면 `voice_id`를 이미 알고 있으므로 화자 클러스터링이 필요 없고,
-화자 라벨이 추정이 아니라 정확하다.
-
-### 메타데이터
-배치 폴더마다 `metadata.csv`를 두고 `s4`가 이를 모아 마스터를 만든다.
-마스터는 **항상 다시 만드는 파일**이다. 직접 수정하지 않고, 배치 CSV를 고친 뒤
-`s4`를 다시 실행한다.
-
-공통 열: `new_filename, old_filename, class, speaker_id, gender, speaker_f0_hz,
-gender_flag, source, voice_name, text_script, qc_pass, cluster_raw, is_representative`
-
-부가 열: `batch, pattern, swing_db_target, swing_db_measured, trend_db, duration_sec,
-sample_rate, voice_id, base_lufs, seed, use_cases, lang_flag, script_version, generated_at`
-
-`s4`는 클래스 x 화자 교차표를 출력한다. 한 화자가 한 클래스에만 등장하면
-모델이 음향 패턴이 아니라 "누구 목소리인가"를 학습할 수 있으므로(speaker leakage)
-경고를 띄운다.
+방향 라벨이 없는 실제 데이터에서는 `normal` 대 `energy_variation` 이진 성능을 우선 보고합니다.
 
 ---
 
-## 알려진 한계
+## 9. 저장소 구조
 
-- **Typecast API에 언어 정보가 없다.** 응답에 language / locale / nationality 필드가
-  없어 API로 외국어 화자를 구분할 수 없다
-  ([List Voices](https://typecast.ai/docs/api-reference/voices/list-voices),
-  [Get Voice Details](https://typecast.ai/docs/api-reference/voices/get-voice-details)).
-  한국어로 합성한 음성을 듣고 판정한다(설계 원칙 7).
-- **캐릭터형 발성도 태그로 걸러지지 않는다.** 파일럿 10명 중 2명이 해당됐다.
-  본 생성 전에 청취 스크리닝이 필요하다.
-- **공식 문서와 실제 `use_cases` 태그 이름이 다르다.** 예: 문서 `Podcast` → 실제 `Radio/Podcast`.
-  그래서 코드는 소문자 부분일치로 비교한다.
-- **길이 조건에 걸려 버려지는 합성도 크레딧이 든다.** 파일럿에서 3.0초 기준으로 57회 중
-  27회가 버려졌다(대부분 2.2~2.9초). 최소 길이를 2.5초로 완화했다.
-- **게인 엔벨로프는 음량만 바꾼다.** 실제로 작게 말할 때 나타나는 숨소리·발성 방식 변화는
-  재현되지 않는다. 논문 limitation에 명시할 항목이다.
-- **TTS 음성들이 같은 백본을 공유한다.** 화자 수백 명이 독립적인 음향 도메인 수백 개를
-  의미하지 않는다.
+```text
+.
+├── README.md
+├── docs/
+│   ├── data_and_training_design.md
+│   ├── labeling_guideline.md
+│   ├── dataset_schema.md
+│   ├── experiment_log.md
+│   └── decision_log.md
+├── src/
+│   ├── synthesis/
+│   ├── preprocessing/
+│   ├── labeling/
+│   ├── features/
+│   ├── training/
+│   └── evaluation/
+├── configs/
+├── data/
+│   ├── README.md
+│   ├── metadata/
+│   └── sample/
+├── notebooks/
+├── results/
+├── requirements.txt
+└── .gitignore
+```
+
+### 데이터 보안
+
+실제 원본 음성은 GitHub에 업로드하지 않습니다. 실제 음성에는 화자 식별 가능성이 있을 수 있으므로 동의 범위, 접근 권한, 보관 정책을 별도로 관리해야 합니다.
+
+GitHub에는 다음만 포함합니다.
+
+- 데이터셋 구조와 익명화된 metadata 예시
+- 데이터 생성·전처리·학습·평가 코드
+- 문서와 설정 파일
+- 집계된 실험 결과
+- 공개 가능한 합성 샘플 또는 비식별 예시
+
+`.gitignore`에는 원본 음성, 모델 가중치, 실험 산출물을 포함합니다.
+
+```gitignore
+# Private or raw audio
+data/raw/
+data/private/
+*.wav
+*.mp3
+*.flac
+*.m4a
+
+# Models and experiment outputs
+models/
+checkpoints/
+runs/
+wandb/
+mlruns/
+
+# Local environment
+.venv/
+venv/
+.env
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+```
 
 ---
 
-## 요구 사항
+## 10. 문서
 
-Python 3.9+, `typecast-python`, `requests`, `python-dotenv`, `soundfile`, `numpy`
-API 키는 `.env`의 `TYPECAST_API_KEY`로 읽는다. `.env`는 `.gitignore`에 포함돼 있다.
+- [데이터·라벨링·학습·평가 설계서](docs/data_and_training_design.md)
+- [라벨링 가이드라인](docs/labeling_guideline.md) *(작성 예정)*
+- [데이터셋 스키마](docs/dataset_schema.md) *(작성 예정)*
+- [실험 로그](docs/experiment_log.md) *(작성 예정)*
+- [의사결정 기록](docs/decision_log.md) *(작성 예정)*
+
+---
+
+## 11. 발표용 핵심 메시지
+
+```text
+실제 음성 데이터는 적고 세부 방향 라벨이 제한적이다.
+
+따라서,
+1. 실제 energy_variation을 자동 음향 분석과 사람 청취 검증으로 세분화하고,
+2. 합성 음성으로 방향이 명확한 사례를 보완하며,
+3. 실제·합성 데이터를 함께 학습하고,
+4. 화자 독립 실제 음성 평가로 서비스 적용 가능성을 검증한다.
+```
+
+---
+
+## 12. 참고 문헌
+
+### 자동 운율 라벨링과 수동 검증
+
+- Rosenberg, A. (2016). *An Automatic Prosody Tagger for Spontaneous Speech*. COLING 2016.  
+  https://aclanthology.org/C16-1037.pdf
+
+- Mertens, P. (2004). *The Prosogram: Semi-Automatic Transcription of Prosody*. Speech Prosody 2004.  
+  https://www.isca-archive.org/speechprosody_2004/mertens04_speechprosody.pdf
+
+- Hirst, D. (2020). *Automatic Prosody Labelling and Assessment*. Oxford Research Encyclopedia of Linguistics.  
+  https://academic.oup.com/edited-volume/34870/chapter/298318371
+
+### 합성·실제 데이터 결합
+
+- Apple Machine Learning Research. *Beyond Real Data: Synthetic Data through the Lens of Regularization*.  
+  https://machinelearning.apple.com/research/beyond-real-data
+
+- Ronchini, F., et al. (2024). *Synthetic Training Set Generation Using Text-to-Audio Models for Sound Event Detection*. DCASE 2024 Workshop.  
+  https://dcase.community/documents/workshop2024/proceedings/DCASE2024Workshop_Ronchini_8.pdf
+
+- Rossenbach, T., et al. (2023). *On the Relevance of Phoneme Duration Variability of Synthesized Speech for ASR*. ASRU 2023.  
+  https://www-i6.informatik.rwth-aachen.de/publications/download/1249/Rossenbach-ASRU-2023.pdf
+
+---
+
+## License
+
+라이선스 및 데이터 공개 범위는 실제 음성 데이터의 동의 조건, 사용 권한, 팀의 배포 정책을 확인한 뒤 결정합니다.
