@@ -2,9 +2,9 @@
 
 > 고립청년 대상 대면 면접훈련 서비스의 음성 분석 연구 모듈
 
-면접 연습 중 나타나는 음성 비유창성 및 발화 특성을 분석하여, 사용자가 자신의 말하기 패턴을 돌아보고 훈련할 수 있도록 돕는 프로젝트입니다.
+면접 연습 중 나타나는 음성 비유창성과 발화 특성을 분석하여, 사용자가 자신의 말하기 패턴을 돌아보고 훈련할 수 있도록 돕는 연구 프로젝트입니다.
 
-이 저장소는 다음 연구 흐름을 관리합니다.
+이 저장소는 실제 일반인 음성과 합성 TTS 음성을 결합하여, 면접 발화에서 나타나는 음향적 특성을 탐지하는 연구 흐름을 관리합니다.
 
 ```text
 실제 일반인 음성 라벨
@@ -59,7 +59,7 @@ tremor
 energy_variation
 ```
 
-`energy_variation`은 후속 반자동 라벨링을 통해 아래 방향 라벨로 확장합니다.
+`energy_variation`은 후속 반자동 라벨링과 사람 청취 검증을 통해 아래 방향 라벨로 확장합니다.
 
 ```text
 normal_energy
@@ -87,27 +87,28 @@ energy_fade_in
 energy_fade_out
 ```
 
-합성 `energy_fade_in`과 `energy_fade_out`은 normal 원본의 진폭 포락선을 점진적으로 조절해 만드는 신호 처리 기반 파생 라벨입니다. 따라서 이 라벨은 실제 화자의 정서, 불안도 또는 자연발화의 비유창성을 뜻하지 않습니다. 합성 데이터는 방향성 있는 음향 패턴을 학습시키기 위한 보조 자료로만 사용하며, 실제 데이터에 대한 성능 평가는 별도로 수행합니다.
+합성 `energy_fade_in`과 `energy_fade_out`은 normal 원본의 진폭 포락선을 점진적으로 조절해 만드는 신호 처리 기반 파생 라벨입니다. 따라서 이 라벨은 실제 화자의 정서, 불안도 또는 자연발화의 비유창성을 뜻하지 않습니다.
 
-### 현재 synthetic_v1 생성 현황
+합성 데이터는 방향성 있는 음향 패턴을 학습시키기 위한 보조 자료로만 사용하며, 실제 데이터에 대한 성능 평가는 별도로 수행합니다.
 
-`synthetic_v1`의 normal 원본은 71개 합성 화자와 6개 공통 면접 문장을 조합하여 생성합니다.
+### 3.3 synthetic_v1 상태
+
+`synthetic_v1`은 71개 합성 화자와 6개 공통 면접 문장을 조합하여 구성했습니다.
 
 ```text
 71 speakers × 6 sentences = 426 normal WAV files
 ```
 
-2026-09-25 기준 normal 원본 426개 생성을 완료했습니다.
+| 클래스 | 파일 수 | 역할 |
+|---|---:|---|
+| `normal_energy` | 426 | 에너지 변조가 없는 기준 원본 |
+| `energy_fade_in` | 426 | 후반부 에너지가 상대적으로 증가하는 합성 파생본 |
+| `energy_fade_out` | 426 | 후반부 에너지가 상대적으로 감소하는 합성 파생본 |
+| 합계 | 1,278 | synthetic_v1 전체 WAV |
 
-- 신규 생성: 424개
-- 기존 생성 검증 파일 재사용: 2개
-- 생성 실패: 0개
-- 기술 QC: 426개 모두 읽기 성공
-- 고peak 후보: 30개
-- clipping 정밀 검사: 30개 PASS, REVIEW 0개
-- 확정 normal 원본: 426개
+`synthetic_v1`의 normal 원본과 fade 파생본은 파일 수, 원본-파생본 대응, 오디오 형식, 길이 일치, 강도 분포 및 원본 대비 에너지 방향성 QC를 완료했습니다. 최종 재생성 대상은 없습니다.
 
-normal 원본은 `audio/normal_energy/`에 저장하며, 이후 `fade-in` 및 `fade-out` 파생 음성 생성의 입력으로 사용합니다. 생성 이력과 품질 점검 결과는 `generation_log.csv`, `normal_qc.csv`, `clipping_check.csv`에 기록합니다.
+생성 조건, QC 방법, 상세 결과, 예외 검토와 최종 판정은 [`docs/experiment_log.md`](docs/experiment_log.md)에 기록합니다.
 
 ---
 
@@ -150,7 +151,7 @@ E(t) = \beta_0 + \beta_1 t + \epsilon
 - \(\Delta E_{dB} < 0\), \(\beta_1 < 0\): `energy_fade_out` 후보
 - 방향이 약하거나 지표 간 방향이 불일치: `energy_ambiguous` 후보
 
-> 특정 dB 차이 또는 기울기 값은 아직 보편적·학술적으로 확정된 실제 발화 판정 임계값이 아닙니다. 합성 음성의 변화량은 합성 강도 제어값일 뿐입니다. 실제 음성 라벨링 파일럿에서 사람 청취 결과와 음향 특징을 비교하여 프로젝트 내부의 잠정 기준을 설정합니다.
+> 특정 dB 차이 또는 기울기 값은 아직 보편적·학술적으로 확정된 실제 발화 판정 임계값이 아닙니다. 실제 음성 라벨링 파일럿에서 사람 청취 결과와 음향 특징을 비교하여 프로젝트 내부의 잠정 기준을 설정합니다.
 
 ---
 
@@ -187,7 +188,7 @@ Real test        : 최종 평가용 실제 화자
 Synthetic train  : 합성 데이터
 ```
 
-같은 화자의 발화가 train과 validation/test에 겹치지 않도록 합니다. 이는 모델이 음향 현상 대신 특정 화자의 음색, 발화 습관, 마이크 조건을 외워 성능이 과대평가되는 data leakage를 막기 위함입니다.
+같은 화자의 발화가 train과 validation/test에 겹치지 않도록 합니다. 이는 모델이 특정 화자의 음색, 발화 습관 또는 마이크 조건을 외워 성능이 과대평가되는 data leakage를 막기 위함입니다.
 
 ### 5.3 평가 데이터 원칙
 
@@ -213,7 +214,10 @@ energy_fade_out
 
 \[
 P(\text{energy_variation})
-= P(\text{energy_fade_in}) + P(\text{energy_fade_out})
+=
+P(\text{energy_fade_in})
++
+P(\text{energy_fade_out})
 \]
 
 ```text
@@ -224,28 +228,7 @@ normal_energy vs energy_variation
 
 ---
 
-## 6. 실제·합성 비율 전략
-
-초기 단계에서는 실제·합성 데이터를 모두 사용하는 전량 혼합 baseline을 먼저 구축합니다.
-
-단, 합성 데이터가 실제 데이터보다 매우 많을 때는 실제 데이터가 업데이트 과정에서 묻히지 않도록 source-balanced mini-batch를 비교합니다.
-
-```text
-잠정 운영값: 실제 50% + 합성 50% per mini-batch
-```
-
-위 1:1 비율은 학술적 최적값이 아니라 합성 데이터 과대표집을 막기 위한 **잠정 운영값**입니다. 실제 validation 성능을 보고 유지·변경합니다.
-
-또한 아래 두 균형은 별개로 관리합니다.
-
-```text
-source balance: 실제 / 합성 비율
-class balance: normal_energy / energy_fade_in / energy_fade_out 비율
-```
-
----
-
-## 7. 최소 실험 설계
+## 6. 최소 실험 설계
 
 | ID | 학습 데이터 | 목적 |
 |---|---|---|
@@ -259,10 +242,26 @@ class balance: normal_energy / energy_fade_in / energy_fade_out 비율
 - 실험 설정 선택은 실제 validation 성능을 기준으로 합니다.
 - 최종안이 결정된 뒤 실제 test를 사용합니다.
 - test 결과를 보고 모델 구조나 threshold를 반복적으로 변경하지 않습니다.
+- 실제·합성 비율은 validation 성능을 바탕으로 조정합니다.
+
+### 초기 source balance
+
+합성 데이터가 실제 데이터보다 많은 경우, 실제 데이터가 업데이트 과정에서 묻히지 않도록 source-balanced mini-batch를 비교합니다.
+
+```text
+잠정 운영값: 실제 50% + 합성 50% per mini-batch
+```
+
+이 1:1 비율은 학술적 최적값이 아니라 합성 데이터 과대표집을 막기 위한 잠정 운영값입니다.
+
+```text
+source balance: 실제 / 합성 비율
+class balance: normal_energy / energy_fade_in / energy_fade_out 비율
+```
 
 ---
 
-## 8. 평가 지표
+## 7. 평가 지표
 
 에너지변동 탐지 및 방향 분류에서 다음 지표를 사용합니다.
 
@@ -277,7 +276,7 @@ class balance: normal_energy / energy_fade_in / energy_fade_out 비율
 
 ---
 
-## 9. 저장소 구조
+## 8. 저장소 구조
 
 ```text
 .
@@ -301,7 +300,10 @@ class balance: normal_energy / energy_fade_in / energy_fade_out 비율
 │       ├── generate_normal_v1.py
 │       ├── qc_normal_wav.py
 │       ├── summarize_normal_qc.py
-│       └── check_clipping_candidates.py
+│       ├── check_clipping_candidates.py
+│       ├── generate_fade_variants.py
+│       ├── qc_fade_variants.py
+│       └── summarize_fade_qc_reviews.py
 ├── configs/
 ├── data/
 │   ├── README.md
@@ -313,11 +315,11 @@ class balance: normal_energy / energy_fade_in / energy_fade_out 비율
 └── .gitignore
 ```
 
-현재 생성된 WAV 원본과 전체 생성·QC 결과 파일은 용량 및 데이터 관리 정책상 Git에서 제외합니다. 코드가 참조하는 데이터셋 루트는 로컬 또는 Drive의 `synthetic_v1`이며, 공개 저장소에는 비식별 예시, 스키마, 코드, 문서만 포함합니다.
+생성된 전체 WAV와 상세 생성·QC 결과 파일은 용량 및 데이터 관리 정책상 Git에서 제외합니다. 코드가 참조하는 데이터셋 루트는 로컬 또는 Drive의 `synthetic_v1`이며, 공개 저장소에는 비식별 예시, 스키마, 코드, 문서 및 집계 결과만 포함합니다.
 
 ### 데이터 보안
 
-실제 원본 음성은 GitHub에 업로드하지 않습니다. 실제 음성에는 화자 식별 가능성이 있을 수 있으므로 동의 범위, 접근 권한, 보관 정책을 별도로 관리해야 합니다.
+실제 원본 음성은 GitHub에 업로드하지 않습니다. 실제 음성에는 화자 식별 가능성이 있을 수 있으므로 동의 범위, 접근 권한 및 보관 정책을 별도로 관리해야 합니다.
 
 GitHub에는 다음만 포함합니다.
 
@@ -327,7 +329,7 @@ GitHub에는 다음만 포함합니다.
 - 집계된 실험 결과
 - 공개 가능한 합성 샘플 또는 비식별 예시
 
-`.gitignore`에는 원본 음성, 모델 가중치, 실험 산출물을 포함합니다.
+`.gitignore`에는 원본 음성, 모델 가중치 및 개별 실험 산출물을 포함합니다.
 
 ```gitignore
 # Private or raw audio
@@ -356,17 +358,19 @@ __pycache__/
 
 ---
 
-## 10. 문서
+## 9. 문서
 
-- [데이터·라벨링·학습·평가 설계서](docs/data_and_training_design.md)
-- [라벨링 가이드라인](docs/labeling_guideline.md) *(작성 예정)*
-- [데이터셋 스키마](docs/dataset_schema.md) *(작성 예정)*
-- [실험 로그](docs/experiment_log.md) *(작성 예정)*
-- [의사결정 기록](docs/decision_log.md) *(작성 예정)*
+| 문서 | 역할 |
+|---|---|
+| [데이터·라벨링·학습·평가 설계서](docs/data_and_training_design.md) | 연구 데이터, 라벨, 학습 및 평가 설계의 상세 정의 |
+| [라벨링 가이드라인](docs/labeling_guideline.md) | 실제 음성 청취 검증과 라벨 부여 절차 |
+| [데이터셋 스키마](docs/dataset_schema.md) | 파일명, metadata 컬럼, 라벨 및 데이터 구조 정의 |
+| [실험 로그](docs/experiment_log.md) | 생성, QC, 실행 결과, 예외 검토 및 변경 이력 |
+| [의사결정 기록](docs/decision_log.md) | 주요 설계 선택, 근거, 대안 및 변경 결정 |
 
 ---
 
-## 11. 발표용 핵심 메시지
+## 10. 발표용 핵심 메시지
 
 ```text
 실제 음성 데이터는 적고 세부 방향 라벨이 제한적입니다.
@@ -380,7 +384,7 @@ __pycache__/
 
 ---
 
-## 12. 참고 문헌
+## 11. 참고 문헌
 
 ### 자동 운율 라벨링과 수동 검증
 
@@ -408,4 +412,4 @@ __pycache__/
 
 ## License
 
-라이선스 및 데이터 공개 범위는 실제 음성 데이터의 동의 조건, 사용 권한, 팀의 배포 정책을 확인한 뒤 결정합니다.
+라이선스 및 데이터 공개 범위는 실제 음성 데이터의 동의 조건, 사용 권한 및 팀의 배포 정책을 확인한 뒤 결정합니다.
