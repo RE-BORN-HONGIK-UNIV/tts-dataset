@@ -8,8 +8,9 @@
 
 ```text
 실제 일반인 음성 라벨
-+ 합성 TTS 음성 생성
-→ 에너지변동 fade-in / fade-out 반자동 세분화
++ 합성 TTS normal 원본 생성
+→ normal 원본에서 fade-in / fade-out 파생 음성 생성
+→ 실제 energy_variation의 반자동 세분화 및 청취 검증
 → 실제·합성 음성 공동학습
 → 화자 독립 실제 음성 평가
 ```
@@ -39,7 +40,7 @@
 본 프로젝트는 다음 질문에 답하는 것을 목표로 합니다.
 
 1. 실제 음성 데이터가 적은 환경에서 합성 음성이 음성 비유창성 탐지에 도움이 되는가?
-2. 실제 `energy_variation` 구간을 `fade_in`과 `fade_out`으로 반자동 세분화할 수 있는가?
+2. 실제 `energy_variation` 구간을 `energy_fade_in`과 `energy_fade_out`으로 반자동 세분화할 수 있는가?
 3. 합성·실제 데이터를 함께 학습할 때, 화자 독립 실제 음성 평가에서 일반화 성능이 개선되는가?
 4. 실제 음성과 합성 음성의 비율 및 sampling 방식이 모델 성능에 어떤 영향을 주는가?
 
@@ -49,7 +50,7 @@
 
 ### 3.1 실제 일반인 음성
 
-실제 일반인 음성은 서비스가 동작해야 하는 목표 도메인입니다. 현재 데이터는 화자 ID(`speaker_id`)와 다음 상위 라벨을 포함합니다.
+실제 일반인 음성은 모델이 최종적으로 일반화해야 하는 목표 도메인입니다. 현재 데이터는 화자 ID(`speaker_id`)와 다음 상위 라벨을 포함합니다.
 
 ```text
 normal
@@ -86,13 +87,35 @@ energy_fade_in
 energy_fade_out
 ```
 
-합성 음성은 실제 음성의 대체물이 아닙니다. 합성 음성은 사전학습과 데이터 증강에 사용하고, 최종 모델의 성능은 실제 음성으로 평가합니다.
+합성 `energy_fade_in`과 `energy_fade_out`은 normal 원본의 진폭 포락선을 점진적으로 조절해 만드는 신호 처리 기반 파생 라벨입니다. 따라서 이 라벨은 실제 화자의 정서, 불안도 또는 자연발화의 비유창성을 뜻하지 않습니다. 합성 데이터는 방향성 있는 음향 패턴을 학습시키기 위한 보조 자료로만 사용하며, 실제 데이터에 대한 성능 평가는 별도로 수행합니다.
+
+### 현재 synthetic_v1 생성 현황
+
+`synthetic_v1`의 normal 원본은 71개 합성 화자와 6개 공통 면접 문장을 조합하여 생성합니다.
+
+```text
+71 speakers × 6 sentences = 426 normal WAV files
+```
+
+2026-09-25 기준 normal 원본 426개 생성을 완료했습니다.
+
+- 신규 생성: 424개
+- 기존 생성 검증 파일 재사용: 2개
+- 생성 실패: 0개
+- 기술 QC: 426개 모두 읽기 성공
+- 고peak 후보: 30개
+- clipping 정밀 검사: 30개 PASS, REVIEW 0개
+- 확정 normal 원본: 426개
+
+normal 원본은 `audio/normal_energy/`에 저장하며, 이후 `fade-in` 및 `fade-out` 파생 음성 생성의 입력으로 사용합니다. 생성 이력과 품질 점검 결과는 `generation_log.csv`, `normal_qc.csv`, `clipping_check.csv`에 기록합니다.
 
 ---
 
 ## 4. 에너지변동 세분화
 
-실제 데이터의 `energy_variation`은 방향 라벨이 없으므로, 다음 반자동 절차를 거쳐 `fade_in`, `fade_out`, `ambiguous`로 세분화합니다.
+이 절에서 `fade_in`, `fade_out`, `ambiguous`는 에너지 변화의 방향 개념을 뜻합니다. 데이터셋의 최종 라벨명은 각각 `energy_fade_in`, `energy_fade_out`, `energy_ambiguous`를 사용합니다.
+
+실제 데이터의 `energy_variation`은 방향 라벨이 없으므로, 다음 반자동 절차를 거쳐 `energy_fade_in`, `energy_fade_out`, `energy_ambiguous`로 세분화합니다.
 
 ```text
 기존 energy_variation 구간
@@ -123,9 +146,9 @@ energy_fade_out
 E(t) = \beta_0 + \beta_1 t + \epsilon
 \]
 
-- \(\Delta E_{dB} > 0\), \(\beta_1 > 0\): `fade_in` 후보
-- \(\Delta E_{dB} < 0\), \(\beta_1 < 0\): `fade_out` 후보
-- 방향이 약하거나 지표 간 방향이 불일치: `ambiguous` 후보
+- \(\Delta E_{dB} > 0\), \(\beta_1 > 0\): `energy_fade_in` 후보
+- \(\Delta E_{dB} < 0\), \(\beta_1 < 0\): `energy_fade_out` 후보
+- 방향이 약하거나 지표 간 방향이 불일치: `energy_ambiguous` 후보
 
 > 특정 dB 차이 또는 기울기 값은 아직 보편적·학술적으로 확정된 실제 발화 판정 임계값이 아닙니다. 합성 음성의 변화량은 합성 강도 제어값일 뿐입니다. 실제 음성 라벨링 파일럿에서 사람 청취 결과와 음향 특징을 비교하여 프로젝트 내부의 잠정 기준을 설정합니다.
 
@@ -140,7 +163,7 @@ E(t) = \beta_0 + \beta_1 t + \epsilon
 ```text
 Training data
 = 고신뢰 실제 train 데이터
-+ 합성 normal / fade_in / fade_out 데이터
++ 합성 normal_energy / energy_fade_in / energy_fade_out 데이터
 ```
 
 권장 학습 흐름은 다음과 같습니다.
@@ -194,10 +217,10 @@ P(\text{energy_variation})
 \]
 
 ```text
-normal vs energy_variation
+normal_energy vs energy_variation
 ```
 
-`fade_in`과 `fade_out`의 방향별 정확도는 실제 방향 라벨이 사람 검증을 통해 확보된 후에만 보고합니다.
+`energy_fade_in`과 `energy_fade_out`의 방향별 정확도는 실제 방향 라벨이 사람 검증을 통해 확보된 후에만 보고합니다.
 
 ---
 
@@ -217,7 +240,7 @@ normal vs energy_variation
 
 ```text
 source balance: 실제 / 합성 비율
-class balance : normal / fade_in / fade_out 비율
+class balance: normal_energy / energy_fade_in / energy_fade_out 비율
 ```
 
 ---
@@ -250,7 +273,7 @@ class balance : normal / fade_in / fade_out 비율
 - ROC-AUC
 - Confusion matrix
 
-방향 라벨이 없는 실제 데이터에서는 `normal` 대 `energy_variation` 이진 성능을 우선 보고합니다.
+방향 라벨이 없는 실제 데이터에서는 `normal_energy` 대 `energy_variation` 이진 성능을 우선 보고합니다.
 
 ---
 
@@ -266,12 +289,19 @@ class balance : normal / fade_in / fade_out 비율
 │   ├── experiment_log.md
 │   └── decision_log.md
 ├── src/
-│   ├── synthesis/
-│   ├── preprocessing/
-│   ├── labeling/
-│   ├── features/
-│   ├── training/
-│   └── evaluation/
+│   ├── pilots/
+│   │   ├── s1_check_voices.py
+│   │   ├── s2_generate_normal_pilot.py
+│   │   ├── s3_generate_energy.py
+│   │   ├── s3_screen_speakers.py
+│   │   ├── s4_build_master_metadata.py
+│   │   ├── s4_generate_energy_pilot.py
+│   │   └── s4_qc_energy_pilot.py
+│   └── v1/
+│       ├── generate_normal_v1.py
+│       ├── qc_normal_wav.py
+│       ├── summarize_normal_qc.py
+│       └── check_clipping_candidates.py
 ├── configs/
 ├── data/
 │   ├── README.md
@@ -282,6 +312,8 @@ class balance : normal / fade_in / fade_out 비율
 ├── requirements.txt
 └── .gitignore
 ```
+
+현재 생성된 WAV 원본과 전체 생성·QC 결과 파일은 용량 및 데이터 관리 정책상 Git에서 제외합니다. 코드가 참조하는 데이터셋 루트는 로컬 또는 Drive의 `synthetic_v1`이며, 공개 저장소에는 비식별 예시, 스키마, 코드, 문서만 포함합니다.
 
 ### 데이터 보안
 
@@ -337,13 +369,13 @@ __pycache__/
 ## 11. 발표용 핵심 메시지
 
 ```text
-실제 음성 데이터는 적고 세부 방향 라벨이 제한적이다.
+실제 음성 데이터는 적고 세부 방향 라벨이 제한적입니다.
 
 따라서,
 1. 실제 energy_variation을 자동 음향 분석과 사람 청취 검증으로 세분화하고,
 2. 합성 음성으로 방향이 명확한 사례를 보완하며,
 3. 실제·합성 데이터를 함께 학습하고,
-4. 화자 독립 실제 음성 평가로 서비스 적용 가능성을 검증한다.
+4. 화자 독립 실제 음성 평가로 서비스 적용 가능성을 검증합니다.
 ```
 
 ---
@@ -353,24 +385,24 @@ __pycache__/
 ### 자동 운율 라벨링과 수동 검증
 
 - Rosenberg, A. (2016). *An Automatic Prosody Tagger for Spontaneous Speech*. COLING 2016.  
-  https://aclanthology.org/C16-1037.pdf
+  [PDF](https://aclanthology.org/C16-1037.pdf)
 
 - Mertens, P. (2004). *The Prosogram: Semi-Automatic Transcription of Prosody*. Speech Prosody 2004.  
-  https://www.isca-archive.org/speechprosody_2004/mertens04_speechprosody.pdf
+  [PDF](https://www.isca-archive.org/speechprosody_2004/mertens04_speechprosody.pdf)
 
 - Hirst, D. (2020). *Automatic Prosody Labelling and Assessment*. Oxford Research Encyclopedia of Linguistics.  
-  https://academic.oup.com/edited-volume/34870/chapter/298318371
+  [Link](https://academic.oup.com/edited-volume/34870/chapter/298318371)
 
 ### 합성·실제 데이터 결합
 
 - Apple Machine Learning Research. *Beyond Real Data: Synthetic Data through the Lens of Regularization*.  
-  https://machinelearning.apple.com/research/beyond-real-data
+  [Link](https://machinelearning.apple.com/research/beyond-real-data)
 
 - Ronchini, F., et al. (2024). *Synthetic Training Set Generation Using Text-to-Audio Models for Sound Event Detection*. DCASE 2024 Workshop.  
-  https://dcase.community/documents/workshop2024/proceedings/DCASE2024Workshop_Ronchini_8.pdf
+  [PDF](https://dcase.community/documents/workshop2024/proceedings/DCASE2024Workshop_Ronchini_8.pdf)
 
 - Rossenbach, T., et al. (2023). *On the Relevance of Phoneme Duration Variability of Synthesized Speech for ASR*. ASRU 2023.  
-  https://www-i6.informatik.rwth-aachen.de/publications/download/1249/Rossenbach-ASRU-2023.pdf
+  [PDF](https://www-i6.informatik.rwth-aachen.de/publications/download/1249/Rossenbach-ASRU-2023.pdf)
 
 ---
 
