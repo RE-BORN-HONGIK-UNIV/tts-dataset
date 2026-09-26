@@ -11,7 +11,19 @@ source = Path(r"G:\내 드라이브\tts_dataset\synthetic_v1\audio\normal_energy
 output = Path(r"C:\Users\seoyn\OneDrive\Desktop\tts-dataset\data\prolong\analysis_preview\slow_normal_pilot")
 output.mkdir(parents=True, exist_ok=True)
 
-files = sorted(source.glob("*.wav"))[:3]
+#files = sorted(source.glob("*.wav"))[:3]
+# 화자마다 첫 번째 WAV 하나씩 골라 최대 3명만 시험한다.
+files = []
+seen_speakers = set()
+
+for path in sorted(source.glob("*.wav")):
+    speaker = path.name.split("__")[0]
+    if speaker not in seen_speakers:
+        files.append(path)
+        seen_speakers.add(speaker)
+    if len(files) == 3:
+        break
+    
 print(f"찾은 시험 대상: {len(files)}개")
 
 for path in files:
