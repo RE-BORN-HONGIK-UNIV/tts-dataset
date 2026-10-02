@@ -1,0 +1,34 @@
+﻿speaker_id,file_name,sentence_id,target_id,variant,decision,reason
+spkS006,spkS006__sent_01__target_01__C.wav,sent_01,target_01,C,pass,청취상 자연스럽고 연속적인 연장
+spkS006,spkS006__sent_02__target_01__B.wav,sent_02,target_01,B,pass,주변 발화 단위보다 길고 자연스럽고 연속적인 연장
+spkS006,spkS006__sent_02__target_02__B.wav,sent_02,target_02,B,pass,청취상 자연스럽고 연속적인 연장
+spkS006,spkS006__sent_03__target_01__C.wav,sent_03,target_01,C,pass,청취상 자연스럽고 연속적인 연장
+spkS006,spkS006__sent_03__target_02__C.wav,sent_03,target_02,C,exclude,"오, 오늘 맡은처럼 목표 위치가 분리되어 들림"
+spkS006,spkS006__sent_04__target_01__C.wav,sent_04,target_01,C,pass,청취상 자연스럽고 연속적인 연장
+spkS006,spkS006__sent_04__target_02__B.wav,sent_04,target_02,B,exclude,서.어.로의처럼 목표 위치가 분리되어 들림
+spkS006,spkS006__sent_05__target_01__C.wav,sent_05,target_01,C,pass,청취상 자연스럽고 연속적인 연장
+spkS006,spkS006__sent_05__target_02__C.wav,sent_05,target_02,C,pass,청취상 자연스럽고 연속적인 연장
+spkS006,spkS006__sent_06__target_01__C.wav,sent_06,target_01,C,pass,음높이 변화는 있으나 끊김 없이 이어지는 연장
+spkS006,spkS006__sent_06__target_02__B.wav,sent_06,target_02,B,exclude,연속적이나 목표 연장이 청취상 약해 정상본과 충분히 구별되지 않음
+spkS009,spkS009__sent_01__target_01__C.wav,sent_01,target_01,C,pass,청취상 자연스럽고 연속적인 연장
+spkS009,spkS009__sent_02__target_01__B.wav,sent_02,target_01,B,pass,청취상 자연스럽고 연속적인 연장
+spkS009,spkS009__sent_02__target_02__C.wav,sent_02,target_02,C,pass,청취상 자연스럽고 연속적인 연장
+spkS009,spkS009__sent_03__target_01__C.wav,sent_03,target_01,C,pass,청취상 자연스럽고 연속적인 연장
+spkS009,spkS009__sent_03__target_02__B.wav,sent_03,target_02,B,pass,청취상 자연스럽고 연속적인 연장
+spkS009,spkS009__sent_04__target_01__C.wav,sent_04,target_01,C,pass,청취상 자연스럽고 연속적인 연장
+spkS009,spkS009__sent_04__target_02__C.wav,sent_04,target_02,C,exclude,서.어.로의처럼 목표 위치가 여러 덩이로 끊겨 들림
+spkS009,spkS009__sent_05__target_01__C.wav,sent_05,target_01,C,pass,청취상 자연스럽고 연속적인 연장
+spkS009,spkS009__sent_05__target_02__B.wav,sent_05,target_02,B,pass,청취상 자연스럽고 연속적인 연장
+spkS009,spkS009__sent_06__target_01__C.wav,sent_06,target_01,C,pass,청취상 자연스럽고 연속적인 연장
+spkS009,spkS009__sent_06__target_02__C.wav,sent_06,target_02,C,exclude,조-오.오은처럼 목표 위치가 끊겨 들림
+spkS010,spkS010__sent_01__target_01__C.wav,sent_01,target_01,C,pass,청취상 자연스럽고 연속적인 연장
+spkS010,spkS010__sent_02__target_01__B.wav,sent_02,target_01,B,pass,청취상 자연스럽고 연속적인 연장
+spkS010,spkS010__sent_02__target_02__B.wav,sent_02,target_02,B,pass,청취상 자연스럽고 연속적인 연장
+spkS010,spkS010__sent_03__target_01__C.wav,sent_03,target_01,C,pass,청취상 자연스럽고 연속적인 연장
+spkS010,spkS010__sent_03__target_02__C.wav,sent_03,target_02,C,exclude,"오~~오, 오늘처럼 목표 위치가 끊겨 들림"
+spkS010,spkS010__sent_04__target_01__C.wav,sent_04,target_01,C,exclude,말 하아~아~아~~~아처럼 여러 번 분절·반복되어 합성 오류로 판단
+spkS010,spkS010__sent_04__target_02__B.wav,sent_04,target_02,B,pass,청취상 애매했으나 정상본 비교에서 완전한 유성 단절이 뚜렷하지 않아 연속 연장으로 판단
+spkS010,spkS010__sent_05__target_01__C.wav,sent_05,target_01,C,pass,청취상 자연스럽고 연속적인 연장
+spkS010,spkS010__sent_05__target_02__C.wav,sent_05,target_02,C,pass,청취상 자연스럽고 연속적인 연장
+spkS010,spkS010__sent_06__target_01__C.wav,sent_06,target_01,C,pass,청취상 자연스럽고 연속적인 연장
+spkS010,spkS010__sent_06__target_02__B.wav,sent_06,target_02,B,exclude,조.오.오.흔처럼 목표 위치가 분리되어 들림

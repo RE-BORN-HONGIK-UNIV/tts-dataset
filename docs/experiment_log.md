@@ -411,3 +411,242 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 - 검수 결과를 모은 뒤 화자·문장·목표 위치별로 B/C 유지, 다른
   표기 재시험, 해당 위치 제외 중 무엇이 적절한지 결정한다.
 - 추가 Typecast 생성과 71명 대량 생성은 그 결정 전까지 보류한다.
+
+
+## 2026-10-02 — 연장 표기 TTS 다화자 파일럿: spkS006 청취 QC
+
+### 대상
+- 화자: `spkS006`
+- 대상 파일: 11개
+- 목적: `spkS001`에서 선택한 연장 표기가 다른 화자에서도
+  자연스럽고 연속적인 연장으로 합성되는지 청취로 확인한다.
+- 판정: `통과 / 보류 / 제외`
+- 주의: 이 청취 판정은 합성 데이터의 품질관리용이며, 실제 개인의
+  불안도나 임상적 연장을 진단·판정하는 기준이 아니다.
+
+### 결과
+
+- 통과: 8개
+  - `spkS006__sent_01__target_01__C.wav`
+  - `spkS006__sent_02__target_01__B.wav`
+  - `spkS006__sent_02__target_02__B.wav`
+  - `spkS006__sent_03__target_01__C.wav`
+  - `spkS006__sent_04__target_01__C.wav`
+  - `spkS006__sent_05__target_01__C.wav`
+  - `spkS006__sent_05__target_02__C.wav`
+  - `spkS006__sent_06__target_01__C.wav`
+
+- 제외: 3개
+  - `spkS006__sent_03__target_02__C.wav`
+    - 사유: “오, 오늘 맡은~”처럼 목표 위치가 분리되어 들림.
+  - `spkS006__sent_04__target_02__B.wav`
+    - 사유: “서.어.로의~”처럼 목표 위치가 분리되어 들림.
+  - `spkS006__sent_06__target_02__B.wav`
+    - 사유: 발화는 연속적이나 목표 연장이 청취상 약해 정상본과 충분히
+      구별되지 않음.
+
+### 판정 원칙
+
+- 연장의 절대 길이 또는 개인적으로 느끼는 길이감만으로 보류·제외하지 않는다.
+- 목표 모음이 정상본과 인접 발화 단위보다 상대적으로 길고,
+  청취상 자연스럽고 연속적으로 이어지면 통과한다.
+- 음높이가 완만히 오르내리는 현상만으로는 끊김·합성 오류로 보지 않는다.
+- 반복, 재시작, 분절 또는 발음 붕괴가 청취상 분명할 때 제외한다.
+
+### 후속 확인
+
+- 제외 파일은 필요 시 정상본 대비 파형·스펙트로그램으로 단절 또는
+  연장 인지 약화 양상을 보조 기록할 수 있다.
+- 시각 자료는 청취 판정의 보조 근거로만 사용하며, 청취상 분리된 파일을
+  그림만으로 통과 처리하지 않는다.
+- `spkS009`, `spkS010`에 같은 청취 기준을 적용한다.
+
+
+## spkS009 청취 QC
+
+### 대상
+- 화자: `spkS009`
+- 대상 파일: 11개
+- 목적: `spkS001`에서 선택한 연장 표기가 다른 화자에서도
+  자연스럽고 연속적인 연장으로 합성되는지 청취로 확인한다.
+- 판정: `통과 / 보류 / 제외`
+
+### 결과
+
+- 통과: 9개
+  - `spkS009__sent_01__target_01__C.wav`
+  - `spkS009__sent_02__target_01__B.wav`
+  - `spkS009__sent_02__target_02__C.wav`
+  - `spkS009__sent_03__target_01__C.wav`
+  - `spkS009__sent_03__target_02__B.wav`
+  - `spkS009__sent_04__target_01__C.wav`
+  - `spkS009__sent_05__target_01__C.wav`
+  - `spkS009__sent_05__target_02__B.wav`
+  - `spkS009__sent_06__target_01__C.wav`
+
+- 제외: 2개
+  - `spkS009__sent_04__target_02__C.wav`
+    - 사유: “서.어.로의”처럼 목표 구간이 여러 덩이로 끊겨 들림.
+  - `spkS009__sent_06__target_02__C.wav`
+    - 사유: “조-오.오은”처럼 목표 구간이 끊겨 들림.
+
+
+## spkS010 청취 QC
+
+### 대상
+- 화자: `spkS010`
+- 대상 파일: 11개
+- 목적: `spkS001`에서 선택한 연장 표기가 다른 화자에서도
+  자연스럽고 연속적인 연장으로 합성되는지 청취로 확인한다.
+- 판정: `통과 / 보류 / 제외`
+
+### 결과
+
+- 통과: 8개
+  - `spkS010__sent_01__target_01__C.wav`
+  - `spkS010__sent_02__target_01__B.wav`
+  - `spkS010__sent_02__target_02__B.wav`
+  - `spkS010__sent_03__target_01__C.wav`
+  - `spkS010__sent_04__target_02__B.wav`
+    - 청취에서는 “서.어어.로의”처럼 들려 연속성 여부가 애매했음.
+    - 정상본과의 파형·스펙트로그램 비교에서 목표 구간의 유성 에너지와
+      조화파가 완전히 끊겼다가 재시작하는 뚜렷한 양상은 확인되지 않음.
+    - 음높이·에너지 변화가 있는 연속 연장으로 판단해 통과함.
+  - `spkS010__sent_05__target_01__C.wav`
+  - `spkS010__sent_05__target_02__C.wav`
+  - `spkS010__sent_06__target_01__C.wav`
+
+- 제외: 3개
+  - `spkS010__sent_03__target_02__C.wav`
+    - 사유: “오~~오, 오늘”처럼 목표 위치가 끊겨 들림.
+  - `spkS010__sent_04__target_01__C.wav`
+    - 사유: “말 하아~아~아~~~아~~~~”처럼 여러 번 분절·반복되어
+      합성 오류로 판단됨.
+  - `spkS010__sent_06__target_02__B.wav`
+    - 사유: “조.오.오.흔”처럼 목표 위치가 분리되어 들림.
+
+
+### 다화자 파일럿 QC 집계
+
+- 대상: `spkS006`, `spkS009`, `spkS010`의 11개 파일씩, 총 33개
+- 최종 결과: 통과 25개, 제외 8개, 보류 0개
+- 화자별 결과:
+  - `spkS006`: 통과 8개, 제외 3개
+  - `spkS009`: 통과 9개, 제외 2개
+  - `spkS010`: 통과 8개, 제외 3개
+- `spkS010__sent_04__target_02__B.wav`는 청취상 연속성 여부가
+  애매했으나, 정상본 대비 파형·스펙트로그램에서 완전한 유성 단절이나
+  재시작이 뚜렷하지 않아 연속 연장으로 판단해 통과했다.
+- 비교 그림:
+  `data/prolong/text_pilot/qc_plots/spkS010__sent_04__normal_vs_target_02_B.png`
+
+| 문장·위치 | 통과 / 전체 | 판단 |
+|---|---:|---|
+| `sent_01 target_01` | 3 / 3 | 유지 후보 |
+| `sent_02 target_01` | 3 / 3 | 유지 후보 |
+| `sent_02 target_02` | 3 / 3 | 유지 후보 |
+| `sent_03 target_01` | 3 / 3 | 유지 후보 |
+| `sent_03 target_02` | 1 / 3 | 재시험 후보 |
+| `sent_04 target_01` | 2 / 3 | 재시험 후보 |
+| `sent_04 target_02` | 1 / 3 | 재시험 후보 |
+| `sent_05 target_01` | 3 / 3 | 유지 후보 |
+| `sent_05 target_02` | 3 / 3 | 유지 후보 |
+| `sent_06 target_01` | 3 / 3 | 유지 후보 |
+| `sent_06 target_02` | 0 / 3 | 제외 |
+
+### 다화자 파일럿 기반 생성 결정
+
+- 현재 표기로 유지 후보:
+  - `sent_01 target_01`
+  - `sent_02 target_01`
+  - `sent_02 target_02`
+  - `sent_03 target_01`
+  - `sent_05 target_01`
+  - `sent_05 target_02`
+  - `sent_06 target_01`
+
+- 현재 표기 재시험 후보:
+  - `sent_03 target_02`
+  - `sent_04 target_01`
+  - `sent_04 target_02`
+
+- 현재 표기 제외:
+  - `sent_06 target_02`
+
+- 결정 근거:
+  - 유지 후보는 3명 파일럿에서 모두 청취상 자연스럽고 연속적인
+    연장으로 통과했다.
+  - 재시험 후보는 한 명 이상에서 분절·반복 또는 합성 오류가 발생해
+    현재 표기를 71명에게 일괄 적용하지 않는다.
+  - `sent_06 target_02`는 세 화자 모두에서 연장 인지가 약하거나
+    분절되어 현재 표기를 사용하지 않는다.
+  - 이 결과는 3명 다화자 파일럿에 근거한 잠정 생성 규칙이다.
+    71명 전체에서의 자동 통과를 의미하지 않는다.
+
+## 2026-10-02 — prolongation v1 대량생성 사전 검증
+
+### 확인한 입력·출력 경로
+- 승인 화자 목록:
+  - `data/_speaker_screening/approved_speakers_v1.csv`
+- 다화자 파일럿 manifest:
+  - `data/prolong/` 아래의 `multispeaker_pilot_manifest.csv`
+- 다화자 파일럿 QC:
+  - `metadata/prolong_multispeaker_pilot_qc.csv`
+- 정식 v1 출력 루트:
+  - `G:\내 드라이브\tts_dataset\synthetic_v1\`
+- 계획 WAV 출력:
+  - `audio/prolongation/`
+- 계획 metadata 출력:
+  - `metadata/prolongation_v1_manifest.csv`
+  - `metadata/prolongation_v1_generation_log.csv`
+
+### 파일럿 QC 재확인
+- 상세 청취 로그 기준 유지 후보 위치는 7개다.
+  - `sent_01 target_01`
+  - `sent_02 target_01`
+  - `sent_02 target_02`
+  - `sent_03 target_01`
+  - `sent_05 target_01`
+  - `sent_05 target_02`
+  - `sent_06 target_01`
+- 대량생성 계획 규모:
+  - 승인 화자 71명 × 유지 후보 위치 7개 = 497개
+
+### 발견한 구현 이슈
+- `generate_prolongation_v1.py`의 자동 QC 집계는
+  `(sentence_id, target_id, variant)`가 동일한 경우에만
+  3명 전원 pass를 요구하도록 작성되어 5개 규칙만 선택했다.
+- 그러나 파일럿 상세 기록에서 아래 두 위치는 화자별로 통과한
+  variant가 달랐다.
+  - `sent_02 target_02`:
+    - `spkS006`: B pass
+    - `spkS009`: C pass
+    - `spkS010`: B pass
+  - `sent_05 target_02`:
+    - `spkS006`: C pass
+    - `spkS009`: B pass
+    - `spkS010`: C pass
+- 따라서 최종 7개 위치 유지 결정과 현재 자동 variant 단위 집계 방식이
+  일치하지 않는다.
+
+### 다음 작업
+- 자동 QC 집계 기반 규칙 선택을 제거한다.
+- 아래 7개 규칙을 v1 생성 코드에 명시적으로 고정한다.
+  - `sent_01 target_01 C`
+  - `sent_02 target_01 B`
+  - `sent_02 target_02 B`
+  - `sent_03 target_01 C`
+  - `sent_05 target_01 C`
+  - `sent_05 target_02 C`
+  - `sent_06 target_01 C`
+- `sent_02 target_02 B`와 `sent_05 target_02 C`는 동일 variant가
+  3명 모두에서 검증된 규칙은 아니며, 2명 통과에 근거한 프로젝트 내부
+  잠정 대표 표기임을 `parameter_rationale.md`에 명시한다.
+- 코드 수정 후 `--dry-run`에서 71명 × 7개 = 497개가 출력되는지 확인한다.
+- 이후 `--limit 2`로 실제 TTS를 소량 생성하고 청취 QC 후 전체 생성을 진행한다.
+
+### 실행 상태
+- `--dry-run`까지만 실행했다.
+- Typecast API 호출 없음.
+- WAV 생성 없음.
+- Google Drive에 새 manifest, generation log, prolongation WAV 생성 없음.
