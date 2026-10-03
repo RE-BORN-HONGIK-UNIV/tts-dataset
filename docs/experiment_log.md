@@ -762,3 +762,81 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 - 이 결과는 합성 데이터의 기술적 완전성과 탐색적 청취 품질을 확인한 것이다.
 - 10개 표본 청취는 355개 전체의 자연스러움을 전수 보증하는 검사는 아니므로, 이후 CNN 학습 전·중에 이상 사례가 확인되면 해당 화자·규칙 조합을 추가 청취한다.
 - 연장 라벨은 합성 입력 텍스트에 기반한 프로젝트 내부 조작 라벨이며, 실제 개인의 불안도, 정신건강 상태, 면접 역량, 임상적 말더듬 또는 임상적 연장을 진단·판정하지 않는다.
+
+
+## 2026-10-04 — slow-normal v1 생성 및 기술 QC 완료
+
+### 목적
+
+- 국소 연장(prolongation) 검출 모델이 문장 전체의 느린 발화를
+  특정 모음·음절의 국소 연장으로 오탐하지 않도록,
+  `prolongation_label=0` slow-normal 반례 음성을 생성한다.
+- slow-normal은 실제 화자의 느린 발화, 불안도 또는 임상 상태를 나타내는
+  관측 데이터가 아니라, normal_energy TTS 원본에 시간축 변환을 적용한
+  합성 데이터 조건이다.
+
+### 입력 및 변환
+
+- 입력 원본: `synthetic_v1/audio/normal_energy/`
+- 원본 수: 426개 WAV
+- 출력: `synthetic_v1/audio/slow_normal/`
+- 적용 함수: `librosa.effects.time_stretch`
+- 적용 rate: `0.85`
+- 이론상 길이 비율: \(1 / 0.85 = 1.17647\)
+- 파일명 매핑:
+  - 원본: `spkS001__sent_01__normal_energy.wav`
+  - 출력: `spkS001__sent_01__slow_normal_r085.wav`
+- 원본 normal_energy WAV는 수정·삭제·덮어쓰기하지 않았으며,
+  slow-normal WAV를 별도 폴더에 생성했다.
+
+### rate 선정 근거
+
+- normal 원본 3개에 `rate=0.85`를 적용한 파일럿 청취를 수행했다.
+- 문장 전체가 비교적 고르게 느려졌고, 특정 모음 또는 음절만 국소 연장처럼
+  현저하게 두드러지는 현상은 청취상 확인되지 않았다.
+- 정식 출력 경로에서 2개를 추가 생성해 재청취했으며, 동일하게
+  전역 감속으로 판단했다.
+- `rate=0.85`는 음성학적·임상적 느린 발화 절단점이 아니라,
+  slow-normal 반례 효과를 확보하기 위해 파일럿 청취를 바탕으로 선택한
+  프로젝트 내부의 잠정 합성 파라미터다.
+
+### 생성 결과
+
+| 항목 | 결과 |
+|---|---:|
+| 처리 대상 | 426개 |
+| 신규 생성 | 424개 |
+| 기존 파일 skip | 2개 |
+| 생성 실패 | 0개 |
+| 최종 slow-normal 파일 수 | 426개 |
+
+### 기술 QC
+
+- QC 스크립트: `src/v1/qc_slow_normal_v1.py`
+- QC 상세 결과: `synthetic_v1/metadata/slow_normal_v1_qc_report.csv`
+- QC 요약: `synthetic_v1/metadata/slow_normal_v1_qc_summary.txt`
+- 기술 QC 결과: **PASS 426 / FAIL 0**
+
+검사 항목:
+
+- normal_energy 원본과 slow-normal 출력의 1:1 파일 대응
+- WAV 파일 존재 및 `soundfile`·`wave` 라이브러리로 읽기 가능 여부
+- 빈 오디오, NaN, Inf 여부
+- 원본과 출력의 sample rate 및 채널 수 일치 여부
+- slow-normal/normal_energy 길이 비율
+- slow-normal RMS 및 무음 비율
+
+길이 비율 기술 QC 기준:
+
+- 허용 범위: `1.10–1.30`
+- 이론값 근접 기준: `1.17647 ± 0.03`
+- 위 기준은 `rate=0.85` 시간축 변환이 의도대로 적용되었는지를 확인하는
+  프로젝트 내부 잠정 기술 기준이며, 임상적 말속도·느린 발화 판정 기준은 아니다.
+
+### 후속 작업
+
+- 대표 표본을 대상으로 청취 QC를 수행한다.
+- 청취 QC에서는 재생 가능 여부, 전역 감속의 일관성, 국소 연장처럼 들리는
+  구간의 유무, 심한 금속성·울림·분절 왜곡 여부를 기록한다.
+- 청취 QC 결과를 확정한 뒤 slow-normal v1을 prolongation 검출 학습용
+  `prolongation_label=0` 반례 후보로 확정한다.
