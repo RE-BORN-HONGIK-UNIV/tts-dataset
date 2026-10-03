@@ -1,38 +1,38 @@
 """
 ==============================================================================
-generate_prolongation_v1.py — synthetic_v1 연장(prolongation) TTS 1차 생성
+generate_prolongation_v1.py — synthetic_v1 연장(prolongation) TTS v1 생성
 ==============================================================================
 
 [역할]
 - screening에서 승인된 TTS 화자 71명에 대해, 다화자 파일럿 청취 QC에서
-  통과한 연장(prolongation) 규칙을 적용한 synthetic_v1 WAV를 생성한다.
-- QC 통과 규칙 7개 × 승인 화자 71명 = 총 497개 생성을 계획한다.
+  동일 (sentence_id, target_id, variant)가 3명 모두 통과한 고정 규칙 5개를
+  적용한 synthetic_v1 연장 WAV를 생성한다.
+- 생성 계획: 5개 규칙 × 승인 화자 71명 = 총 355개.
 - normal_energy 원본 및 로컬 파일럿 WAV는 수정하거나 덮어쓰지 않는다.
 
 [입력]
 - data/_speaker_screening/approved_speakers_v1.csv
 - data/prolong/ 아래의 multispeaker_pilot_manifest.csv
-- metadata/prolong_multispeaker_pilot_qc.csv
 - repo root의 .env (TYPECAST_API_KEY)
 
 [출력: Google Drive synthetic_v1]
-- audio/prolongation/: 연장 WAV 497개
+- audio/prolongation/: 연장 WAV 최대 355개
 - metadata/prolongation_v1_manifest.csv: 파일별 고정 생성 계획
 - metadata/prolongation_v1_generation_log.csv: 생성·skip·실패 이력
 
 [실행]
-- API 호출 없이 입력·QC·경로·497개 계획만 검증:
-    py src\\v1\\generate_prolongation_v1.py --dry-run
+- API 호출 없이 입력·경로·355개 계획만 검증:
+    py src\v1\generate_prolongation_v1.py --dry-run
 - 실제 TTS 2개만 시험 생성:
-    py src\\v1\\generate_prolongation_v1.py --limit 2
-- 전체 497개 생성:
-    py src\\v1\\generate_prolongation_v1.py
-- 정상 WAV까지 강제 재생성:
-    py src\\v1\\generate_prolongation_v1.py --overwrite
+    py src\v1\generate_prolongation_v1.py --limit 2
+- 전체 355개 생성:
+    py src\v1\generate_prolongation_v1.py
+- 기존 연장 WAV까지 강제 재생성:
+    py src\v1\generate_prolongation_v1.py --overwrite
 
 [안전 및 해석 한계]
 - --dry-run은 API 호출, WAV 저장, CSV 저장을 하지 않는다.
-- 기존 정상 WAV는 기본적으로 skip한다.
+- 기존 prolongation WAV는 기본적으로 skip한다.
 - 연장 라벨은 TTS 입력 텍스트에 적용한 프로젝트 내부 합성 라벨이다.
 - 이 데이터는 실제 불안도, 정신건강 상태, 면접 역량 또는 임상적
   말더듬·연장을 진단하거나 판정하는 용도가 아니다.
@@ -77,12 +77,24 @@ MAX_RETRY = 3
 RETRY_SLEEP_SEC = 2.0
 
 EXPECTED_SPEAKER_COUNT = 71
-EXPECTED_RULE_COUNT = 7
+EXPECTED_RULE_COUNT = 5
 EXPECTED_PROLONGATION_COUNT = EXPECTED_SPEAKER_COUNT * EXPECTED_RULE_COUNT
 
-# 파일럿에서 규칙 하나를 채택하기 위한 최소 독립 청취 화자 수.
-# 현재 파일럿 설계의 3명 전체 통과 기준에 따른 프로젝트 내부 운영값이다.
-REQUIRED_PILOT_PASS_COUNT = 3
+# v1은 다화자 파일럿에서 동일 (sentence_id, target_id, variant)가
+# spkS006·spkS009·spkS010에서 모두 청취 통과한 규칙만 사용한다.
+#
+# 이 목록은 학술적·임상적 연장 임계값이 아니라, 합성 품질을 우선한
+# 프로젝트 내부의 보수적 v1 생성 규칙이다.
+#
+# sent_02 target_02와 sent_05 target_02는 화자별 통과 variant가 달라
+# v1에서는 보류한다. 이후 더 다양한 화자 대상 파일럿에서 재검증한다.
+V1_PROLONGATION_RULE_KEYS = [
+    ("sent_01", "target_01", "C"),
+    ("sent_02", "target_01", "B"),
+    ("sent_03", "target_01", "C"),
+    ("sent_05", "target_01", "C"),
+    ("sent_06", "target_01", "C"),
+]
 
 
 # ------------------------------------------------------------------
@@ -92,13 +104,13 @@ REQUIRED_PILOT_PASS_COUNT = 3
 def parse_args():
     """dry-run, 소량 생성, overwrite 옵션을 읽는다."""
     parser = argparse.ArgumentParser(
-        description="synthetic_v1 prolongation WAV 497개 생성"
+        description="synthetic_v1 prolongation WAV 최대 355개 생성"
     )
 
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="API 호출·WAV/CSV 저장 없이 입력·QC·경로·계획만 검증한다.",
+        help="API 호출·WAV/CSV 저장 없이 입력·경로·계획만 검증한다.",
     )
 
     parser.add_argument(
@@ -138,15 +150,8 @@ def get_paths():
     )
 
     pilot_root = repo_root / "data" / "prolong"
-    pilot_qc_csv = (
-        repo_root
-        / "metadata"
-        / "prolong_multispeaker_pilot_qc.csv"
-    )
 
     # generate_normal_v1.py에 있는 drive_root와 동일하게 설정.
-    # PowerShell 출력에서 한글이 깨졌을 수 있으므로 VS Code 원본의
-    # drive_root 문자열을 그대로 복사해 확인한다.
     drive_root = Path(r"G:\내 드라이브")
 
     dataset_root = drive_root / "tts_dataset" / "synthetic_v1"
@@ -157,7 +162,6 @@ def get_paths():
         "repo_root": repo_root,
         "approved_speakers_csv": approved_speakers_csv,
         "pilot_root": pilot_root,
-        "pilot_qc_csv": pilot_qc_csv,
         "drive_root": drive_root,
         "dataset_root": dataset_root,
         "prolongation_dir": prolongation_dir,
@@ -292,46 +296,19 @@ def find_pilot_manifest(pilot_root: Path) -> Path:
 
 
 # ------------------------------------------------------------------
-# 6. QC + pilot manifest로 v1 연장 규칙 7개 만들기
+# 6. 고정 v1 규칙 5개의 입력 텍스트 읽기
 # ------------------------------------------------------------------
-
-def normalize_status(value: str) -> str:
-    """QC 판정 문자열을 비교 가능한 소문자 형태로 정규화한다."""
-    return (value or "").strip().lower()
-
-
-def find_first_column(
-    available_columns: set[str],
-    candidates: list[str],
-    label: str,
-) -> str:
-    """후보 열 이름들 중 실제 존재하는 첫 열을 찾아 반환한다."""
-    for column in candidates:
-        if column in available_columns:
-            return column
-
-    sys.exit(
-        f"[오류] {label}에 해당하는 열을 찾지 못했습니다.\n"
-        f"  후보 열: {', '.join(candidates)}\n"
-        f"  현재 열: {', '.join(sorted(available_columns))}"
-    )
-
 
 def load_v1_rules_from_pilot(
     pilot_manifest_csv: Path,
-    pilot_qc_csv: Path,
 ) -> list[dict[str, str]]:
     """
-    파일럿 manifest의 실제 variant_text·normal_text를 보존하고,
-    QC에서 모든 파일럿 화자가 pass한 규칙만 v1 규칙으로 채택한다.
+    v1에서 사용할 5개 규칙은 V1_PROLONGATION_RULE_KEYS에 명시적으로 고정한다.
 
-    현재 multispeaker_pilot_manifest.csv 열:
-    - speaker_id, voice_id, sentence_id, target_id
-    - normal_text
-    - target_original: 원래 목표 단어
-    - target_replacement: 파일럿에서 적용한 연장 치환 표기
-    - variant_id: B/C 등 연장 단계
-    - variant_text: Typecast 입력용 연장 문장
+    pilot manifest는 각 규칙의 실제 Typecast 입력 문장(variant_text),
+    normal_text, target_original을 읽는 용도로만 사용한다.
+
+    규칙 선택을 QC CSV에서 자동 집계하지 않는다.
     """
     manifest_rows = read_csv_rows(
         pilot_manifest_csv,
@@ -344,36 +321,6 @@ def load_v1_rules_from_pilot(
             "normal_text",
             "target_original",
         },
-    )
-
-    qc_rows = read_csv_rows(
-        pilot_qc_csv,
-        {
-            "speaker_id",
-            "sentence_id",
-            "target_id",
-        },
-    )
-
-    qc_columns = set(qc_rows[0].keys())
-
-    qc_variant_column = find_first_column(
-        qc_columns,
-        ["variant", "variant_id"],
-        "QC의 연장 단계",
-    )
-
-    qc_status_column = find_first_column(
-    qc_columns,
-    [
-        "decision",
-        "final_judgment",
-        "final_status",
-        "status",
-        "judgment",
-        "result",
-    ],
-    "QC 최종 판정",
     )
 
     manifest_by_rule: dict[tuple[str, str, str], list[dict[str, str]]] = (
@@ -395,43 +342,16 @@ def load_v1_rules_from_pilot(
 
         manifest_by_rule[key].append(row)
 
-    passed_speakers_by_rule: dict[tuple[str, str, str], set[str]] = (
-        defaultdict(set)
-    )
-    non_pass_by_rule: dict[tuple[str, str, str], list[tuple[str, str]]] = (
-        defaultdict(list)
-    )
-
-    for row in qc_rows:
-        key = (
-            (row.get("sentence_id") or "").strip(),
-            (row.get("target_id") or "").strip(),
-            (row.get(qc_variant_column) or "").strip(),
-        )
-
-        speaker_id = (row.get("speaker_id") or "").strip()
-        status = normalize_status(row.get(qc_status_column) or "")
-
-        if not all(key) or not speaker_id:
-            sys.exit(
-                "[오류] QC CSV에 비어 있는 식별자가 있습니다:\n"
-                f"{row}"
-            )
-
-        if status == "pass":
-            passed_speakers_by_rule[key].add(speaker_id)
-        else:
-            non_pass_by_rule[key].append((speaker_id, status))
-
     selected_rules: list[dict[str, str]] = []
 
-    for key, pilot_rows in manifest_by_rule.items():
-        pass_count = len(passed_speakers_by_rule.get(key, set()))
-        non_pass = non_pass_by_rule.get(key, [])
+    for key in V1_PROLONGATION_RULE_KEYS:
+        pilot_rows = manifest_by_rule.get(key, [])
 
-        # 파일럿의 서로 다른 3명 모두 pass, non-pass 없음인 규칙만 사용.
-        if pass_count != REQUIRED_PILOT_PASS_COUNT or non_pass:
-            continue
+        if not pilot_rows:
+            sys.exit(
+                "[오류] 고정 v1 규칙에 대응하는 pilot manifest 행이 없습니다.\n"
+                f"  규칙: {key}"
+            )
 
         input_text_values = {
             (row.get("variant_text") or "").strip()
@@ -453,21 +373,21 @@ def load_v1_rules_from_pilot(
 
         if len(input_text_values) != 1:
             sys.exit(
-                "[오류] 동일 pilot 규칙의 variant_text가 하나로 고정되지 않았습니다.\n"
+                "[오류] 고정 v1 규칙의 variant_text가 하나로 고정되지 않았습니다.\n"
                 f"  규칙: {key}\n"
                 f"  variant_text 후보: {input_text_values}"
             )
 
         if len(normal_text_values) != 1:
             sys.exit(
-                "[오류] 동일 pilot 규칙의 normal_text가 하나로 고정되지 않았습니다.\n"
+                "[오류] 고정 v1 규칙의 normal_text가 하나로 고정되지 않았습니다.\n"
                 f"  규칙: {key}\n"
                 f"  normal_text 후보: {normal_text_values}"
             )
 
         if len(target_text_values) != 1:
             sys.exit(
-                "[오류] 동일 pilot 규칙의 target_original이 하나로 고정되지 않았습니다.\n"
+                "[오류] 고정 v1 규칙의 target_original이 하나로 고정되지 않았습니다.\n"
                 f"  규칙: {key}\n"
                 f"  target_original 후보: {target_text_values}"
             )
@@ -480,49 +400,22 @@ def load_v1_rules_from_pilot(
                 "target_text": next(iter(target_text_values)),
                 "normal_text": next(iter(normal_text_values)),
                 "input_text": next(iter(input_text_values)),
-                "pilot_pass_count": str(pass_count),
+                "rule_source": "fixed_v1_3_of_3_same_variant_pass",
             }
         )
 
-    selected_rules.sort(
-        key=lambda row: (
-            row["sentence_id"],
-            row["target_id"],
-            row["variant"],
-        )
-    )
-
     if len(selected_rules) != EXPECTED_RULE_COUNT:
-        summary_lines = []
-
-        all_rule_keys = sorted(
-            set(manifest_by_rule)
-            | set(passed_speakers_by_rule)
-            | set(non_pass_by_rule)
-        )
-
-        for key in all_rule_keys:
-            pass_count = len(passed_speakers_by_rule.get(key, set()))
-            non_pass = non_pass_by_rule.get(key, [])
-            summary_lines.append(
-                f"  {key}: pass={pass_count}, non_pass={non_pass}"
-            )
-
-        summary = "\n".join(summary_lines)
-
         sys.exit(
-            "[오류] QC 전체 통과 규칙 수가 예상과 다릅니다.\n"
+            "[오류] 고정 v1 규칙 수가 예상과 다릅니다.\n"
             f"  기대값: {EXPECTED_RULE_COUNT}\n"
-            f"  실제값: {len(selected_rules)}\n"
-            "  규칙별 QC 요약:\n"
-            f"{summary}"
+            f"  실제값: {len(selected_rules)}"
         )
 
     return selected_rules
 
 
 # ------------------------------------------------------------------
-# 7. 71명 × 7개 규칙 생성 계획
+# 7. 71명 × 5개 고정 규칙 생성 계획
 # ------------------------------------------------------------------
 
 def build_plans(
@@ -530,7 +423,7 @@ def build_plans(
     rules: list[dict[str, str]],
     paths: dict[str, Path],
 ) -> list[dict[str, str]]:
-    """71명 × QC 통과 규칙 7개의 결정론적 생성 계획 497개를 만든다."""
+    """71명 × 고정 v1 규칙 5개의 결정론적 생성 계획 355개를 만든다."""
     plans: list[dict[str, str]] = []
 
     for speaker in speakers:
@@ -556,6 +449,7 @@ def build_plans(
                     "target_text": rule["target_text"],
                     "normal_text": rule["normal_text"],
                     "input_text": rule["input_text"],
+                    "rule_source": rule["rule_source"],
                     "class_label": "prolongation",
                     "filename": filename,
                     "output_path": str(paths["prolongation_dir"] / filename),
@@ -727,6 +621,7 @@ MANIFEST_FIELDS = [
     "target_text",
     "normal_text",
     "input_text",
+    "rule_source",
     "class_label",
     "filename",
     "output_path",
@@ -748,7 +643,7 @@ LOG_FIELDS = [
 
 
 def write_manifest(manifest_csv: Path, plans: list[dict[str, str]]) -> None:
-    """497개 전체의 고정 생성 계획을 manifest로 저장한다."""
+    """355개 전체의 고정 생성 계획을 manifest로 저장한다."""
     manifest_csv.parent.mkdir(parents=True, exist_ok=True)
 
     with manifest_csv.open("w", encoding="utf-8-sig", newline="") as file:
@@ -822,7 +717,6 @@ def print_plan_summary(
     print("=" * 78)
     print(f"승인 화자 CSV:          {paths['approved_speakers_csv']}")
     print(f"pilot manifest:         {pilot_manifest_csv}")
-    print(f"pilot QC CSV:           {paths['pilot_qc_csv']}")
     print(f"Google Drive root:      {paths['drive_root']}")
     print(f"synthetic_v1 root:      {paths['dataset_root']}")
     print(f"prolongation WAV 경로:  {paths['prolongation_dir']}")
@@ -831,22 +725,22 @@ def print_plan_summary(
     print(f"TTS model:              {TTS_MODEL}")
     print(f"target LUFS:            {BASE_LUFS}")
     print(f"승인 화자 수:           {len(speakers)}")
-    print(f"QC 통과 규칙 수:        {len(rules)}")
+    print(f"고정 v1 규칙 수:        {len(rules)}")
     print(f"전체 계획 수:           {len(plans)}")
     print(f"dry-run:                {args.dry_run}")
     print(f"limit:                  {args.limit}")
     print(f"overwrite:              {args.overwrite}")
 
-    print("\n[QC 전체 통과 연장 규칙]")
+    print("\n[고정 v1 연장 규칙]")
     for rule in rules:
         print(
             f"  {rule['sentence_id']} | {rule['target_id']} | "
             f"{rule['variant']} | {rule['target_text']} | "
-            f"pilot_pass={rule['pilot_pass_count']}"
+            f"source={rule['rule_source']}"
         )
 
-    print("\n[생성 계획 예시: 처음 7개]")
-    for plan in plans[:7]:
+    print("\n[생성 계획 예시: 처음 5개]")
+    for plan in plans[:5]:
         print(
             f"  {plan['speaker_id']} | {plan['sentence_id']} | "
             f"{plan['target_id']} | {plan['variant']} | "
@@ -886,8 +780,8 @@ def main() -> None:
     speakers = load_approved_speakers(paths["approved_speakers_csv"])
     rules = load_v1_rules_from_pilot(
         pilot_manifest_csv=pilot_manifest_csv,
-        pilot_qc_csv=paths["pilot_qc_csv"],
     )
+
     full_plans = build_plans(speakers, rules, paths)
     plans = full_plans[:args.limit] if args.limit is not None else full_plans
 
@@ -1006,7 +900,7 @@ def main() -> None:
             )
 
             print(
-                f"           saved | {saved_info['duration_sec']:.3f}s | "
+                f"            saved | {saved_info['duration_sec']:.3f}s | "
                 f"{saved_info['sample_rate']}Hz | "
                 f"{saved_info['channels']}ch"
             )
@@ -1027,7 +921,7 @@ def main() -> None:
                 ),
             )
 
-            print(f"           FAILED | {type(error).__name__}: {error}")
+            print(f"            FAILED | {type(error).__name__}: {error}")
 
     print("\n" + "=" * 78)
     print("[prolongation 생성 완료]")

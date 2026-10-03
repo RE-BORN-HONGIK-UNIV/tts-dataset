@@ -583,9 +583,12 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
   - 이 결과는 3명 다화자 파일럿에 근거한 잠정 생성 규칙이다.
     71명 전체에서의 자동 통과를 의미하지 않는다.
 
-## 2026-10-02 — prolongation v1 대량생성 사전 검증
+
+
+## 2026-10-03 — prolongation v1 대량생성 규칙 재결정
 
 ### 확인한 입력·출력 경로
+
 - 승인 화자 목록:
   - `data/_speaker_screening/approved_speakers_v1.csv`
 - 다화자 파일럿 manifest:
@@ -600,8 +603,9 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
   - `metadata/prolongation_v1_manifest.csv`
   - `metadata/prolongation_v1_generation_log.csv`
 
-### 파일럿 QC 재확인
-- 상세 청취 로그 기준 유지 후보 위치는 7개다.
+### 파일럿 QC 해석
+
+- 다화자 청취 QC를 문장 내 **연장 위치 기준**으로 집계하면 유지 후보는 7개다.
   - `sent_01 target_01`
   - `sent_02 target_01`
   - `sent_02 target_02`
@@ -609,44 +613,152 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
   - `sent_05 target_01`
   - `sent_05 target_02`
   - `sent_06 target_01`
-- 대량생성 계획 규모:
-  - 승인 화자 71명 × 유지 후보 위치 7개 = 497개
-
-### 발견한 구현 이슈
-- `generate_prolongation_v1.py`의 자동 QC 집계는
-  `(sentence_id, target_id, variant)`가 동일한 경우에만
-  3명 전원 pass를 요구하도록 작성되어 5개 규칙만 선택했다.
-- 그러나 파일럿 상세 기록에서 아래 두 위치는 화자별로 통과한
-  variant가 달랐다.
-  - `sent_02 target_02`:
-    - `spkS006`: B pass
-    - `spkS009`: C pass
-    - `spkS010`: B pass
-  - `sent_05 target_02`:
-    - `spkS006`: C pass
-    - `spkS009`: B pass
-    - `spkS010`: C pass
-- 따라서 최종 7개 위치 유지 결정과 현재 자동 variant 단위 집계 방식이
-  일치하지 않는다.
-
-### 다음 작업
-- 자동 QC 집계 기반 규칙 선택을 제거한다.
-- 아래 7개 규칙을 v1 생성 코드에 명시적으로 고정한다.
+- 그러나 `(sentence_id, target_id, variant)`까지 동일한 **고정 표기 기준**으로 보면, 아래 5개 규칙만 `spkS006`, `spkS009`, `spkS010` 모두에서 통과했다.
   - `sent_01 target_01 C`
   - `sent_02 target_01 B`
-  - `sent_02 target_02 B`
   - `sent_03 target_01 C`
   - `sent_05 target_01 C`
-  - `sent_05 target_02 C`
   - `sent_06 target_01 C`
-- `sent_02 target_02 B`와 `sent_05 target_02 C`는 동일 variant가
-  3명 모두에서 검증된 규칙은 아니며, 2명 통과에 근거한 프로젝트 내부
-  잠정 대표 표기임을 `parameter_rationale.md`에 명시한다.
-- 코드 수정 후 `--dry-run`에서 71명 × 7개 = 497개가 출력되는지 확인한다.
-- 이후 `--limit 2`로 실제 TTS를 소량 생성하고 청취 QC 후 전체 생성을 진행한다.
 
-### 실행 상태
-- `--dry-run`까지만 실행했다.
-- Typecast API 호출 없음.
-- WAV 생성 없음.
-- Google Drive에 새 manifest, generation log, prolongation WAV 생성 없음.
+### 7개와 5개의 차이
+
+- `sent_02 target_02`는 위치 자체는 세 화자 모두 통과했지만, 통과한 variant가 화자별로 달랐다.
+  - `spkS006`: `B` 통과
+  - `spkS009`: `C` 통과
+  - `spkS010`: `B` 통과
+- `sent_05 target_02`도 위치 자체는 세 화자 모두 통과했지만, 통과한 variant가 화자별로 달랐다.
+  - `spkS006`: `C` 통과
+  - `spkS009`: `B` 통과
+  - `spkS010`: `C` 통과
+- 따라서 두 위치는 연장이 자연스럽게 합성될 수 있는 위치라는 근거는 있으나, 하나의 동일 B/C 표기를 모든 화자에 적용해도 안정적이라는 근거는 현재 부족하다.
+
+### v1 생성 결정
+
+- prolongation v1은 합성 품질을 우선하는 보수적 기준선으로 구성한다.
+- 자동 QC 집계로 규칙을 선택하지 않고, 아래 5개 규칙을 생성 코드에 명시적으로 고정한다.
+  - `sent_01 target_01 C`
+  - `sent_02 target_01 B`
+  - `sent_03 target_01 C`
+  - `sent_05 target_01 C`
+  - `sent_06 target_01 C`
+- 대량생성 목표:
+  - 승인 화자 71명 × 고정 규칙 5개 = **355개**
+- v1 규칙은 동일 `(sentence_id, target_id, variant)`가 3명 파일럿에서 모두 청취 통과한 경우만 포함한다.
+- 이 “3명 모두 통과” 기준은 학술적·임상적 연장 임계값이 아니라, 현재 파일럿의 합성 품질관리 목적을 위한 프로젝트 내부의 보수적 운영 기준이다.
+
+### 보류 규칙과 향후 확장
+
+- 아래 두 위치는 v1 생성에서는 보류하고, 후속 파일럿 및 확장 데이터 후보로 남긴다.
+  - `sent_02 target_02`
+  - `sent_05 target_02`
+- 향후 더 다양한 화자에서 각 위치의 B/C 표기를 다시 생성·청취하고, 동일 표기가 여러 화자에서 자연스럽고 연속적으로 통과하는지 확인한다.
+- 통과한 규칙은 v1.1 또는 v2의 위치 다양화 데이터로 추가 검토한다.
+- `sent_03 target_02`, `sent_04 target_01`, `sent_04 target_02`는 재시험 후보 상태를 유지한다.
+- `sent_06 target_02`는 현재 표기에서 제외 상태를 유지한다.
+
+
+### 코드 수정 및 dry-run 검증
+
+- `src/v1/generate_prolongation_v1.py`에서 QC CSV의 자동 집계로 생성 규칙을 선택하던 로직을 제거했다.
+- 다화자 파일럿에서 동일 `(sentence_id, target_id, variant)`가 3명 모두 청취 통과한 5개 규칙을 코드 상수로 명시했다.
+- pilot manifest는 규칙 선택용이 아니라, 확정 규칙의 `variant_text`, `normal_text`, `target_original`을 읽어 실제 Typecast 입력 텍스트를 재현하는 용도로 유지했다.
+- `--dry-run` 결과:
+  - 승인 화자 수: 71명
+  - 고정 v1 규칙 수: 5개
+  - 전체 생성 계획 수: 355개
+  - Typecast API 호출: 0회
+  - WAV 저장: 0개
+  - manifest 및 generation log 저장: 0개
+- dry-run에서 확인한 출력 경로:
+  - WAV: `G:\내 드라이브\tts_dataset\synthetic_v1\audio\prolongation\`
+  - manifest: `G:\내 드라이브\tts_dataset\synthetic_v1\metadata\prolongation_v1_manifest.csv`
+  - generation log: `G:\내 드라이브\tts_dataset\synthetic_v1\metadata\prolongation_v1_generation_log.csv`
+
+### 대량생성 결과
+
+- `--limit 2`로 소량 생성한 파일을 먼저 청취했다.
+  - `spkS001__sent_01__target_01__C.wav`
+  - `spkS001__sent_02__target_01__B.wav`
+- 두 소량 생성 파일은 청취상 자연스럽고 연속적인 연장으로 확인했다.
+- 이후 전체 대량생성을 실행했다.
+- 처리 결과:
+  - 전체 처리 수: 355개
+  - 신규 생성: 353개
+  - 기존 파일 skip: 2개
+  - 실패: 0개
+- 기존 skip 2개는 소량 생성 단계에서 이미 생성한 파일이며, 전체 생성 시 정상 WAV로 확인되어 재생성하지 않았다.
+- 최종 연장 WAV 수는 355개다.
+
+### 자동 기술 QC
+
+- 자동 기술 QC 스크립트:
+  - `src/v1/qc_prolongation_v1.py`
+- QC는 WAV 원본을 수정·삭제하지 않고, 파일 수, 읽기 가능 여부, sample rate, channel 수, 길이, peak, 무음 비율을 검사했다.
+- 초기 실행에서는 QC 코드의 예상 sample rate가 `24000 Hz`로 설정되어 있어, 실제 파일 형식과 달라 355개 전체가 REVIEW로 표시되었다.
+- QC CSV에서 실제 sample rate를 집계한 결과, 355개 WAV 모두 `44100 Hz`임을 확인했다.
+- 따라서 `EXPECTED_SAMPLE_RATE`를 `44100`으로 수정한 뒤 자동 QC를 다시 실행했다.
+- 수정 후 결과:
+  - 검사 대상: 355개
+  - PASS: 332개
+  - REVIEW: 23개
+  - FAIL: 0개
+- 23개 REVIEW의 사유는 `peak >= 0.999` 경고뿐이었다.
+- 길이 분포:
+  - 최소: 2.690초
+  - 중앙값: 3.570초
+  - 최대: 5.920초
+- 기술 QC 결과:
+  - `G:\내 드라이브\tts_dataset\synthetic_v1\qc\prolongation_v1_technical_qc.csv`
+  - `G:\내 드라이브\tts_dataset\synthetic_v1\qc\prolongation_v1_technical_qc_summary.txt`
+
+### clipping 정밀 검사
+
+- peak가 높은 23개 REVIEW 파일을 대상으로, 최대 진폭 근처에서 파형이 여러 샘플 동안 평평하게 이어지는 실제 clipping 의심 구간이 있는지 정밀 검사했다.
+- 정밀 검사 스크립트:
+  - `src/v1/check_prolongation_clipping.py`
+- 검사 기준:
+  - `abs(sample) >= 0.999`인 near-full-scale 구간을 확인했다.
+  - 1.0 ms 이상 연속된 평탄 구간이 있으면 REVIEW 대상으로 표시하도록 했다.
+  - 위 기준은 실제 clipping 후보를 보수적으로 찾기 위한 프로젝트 내부 기술 QC 값이며, 연장 판정 기준은 아니다.
+- 검사 결과:
+  - 검사 대상: 23개
+  - PASS: 23개
+  - REVIEW: 0개
+  - FAIL: 0개
+- 따라서 1차 QC에서 peak 경고가 있던 23개도 실제 파형 clipping이 확인되지 않았다.
+- clipping 정밀 검사 결과:
+  - `G:\내 드라이브\tts_dataset\synthetic_v1\qc\prolongation_v1_clipping_check.csv`
+  - `G:\내 드라이브\tts_dataset\synthetic_v1\qc\prolongation_v1_clipping_check_summary.txt`
+
+### 청취 표본 QC
+
+- 기술 QC 이후, 대량 생성 결과의 위치별 합성 품질을 탐색적으로 확인하기 위해 5개 고정 규칙마다 승인 화자 목록의 정렬상 첫 화자와 마지막 화자를 선택했다.
+- 청취 표본:
+  - 화자: `spkS001`, `spkS080`
+  - 규칙: 5개
+  - 총 표본 수: 10개
+- 청취 표본 목록 생성 스크립트:
+  - `src/v1/make_prolongation_v1_listening_sample.py`
+- 청취 판정 기준:
+  - `pass`: 목표 모음이 자연스럽고 연속적으로 길게 들림
+  - `review`: 연속성·연장 강도·자연스러움이 애매함
+  - `exclude`: 반복·재시작·명확한 분절·발음 붕괴 또는 연장 인지 약화
+- 청취 결과:
+  - PASS: 10개
+  - REVIEW: 0개
+  - EXCLUDE: 0개
+- 모든 표본은 청취상 자연스럽고 연속적인 연장으로 기록했다.
+- 청취 QC 기록:
+  - `G:\내 드라이브\tts_dataset\synthetic_v1\qc\prolongation_v1_listening_sample.csv`
+  - `G:\내 드라이브\tts_dataset\synthetic_v1\qc\prolongation_v1_listening_sample_instructions.txt`
+
+### v1 최종 상태
+
+- prolongation v1 대량생성은 완료되었다.
+- 최종 확보한 연장 WAV는 355개다.
+- 모든 파일은 읽기 가능한 WAV로 확인되었고, 기술 QC에서 FAIL은 0개였다.
+- peak 경고 23개는 clipping 정밀 검사에서 모두 PASS로 확인되었다.
+- 5개 규칙 × 2개 화자, 총 10개 청취 표본은 모두 자연스럽고 연속적인 연장으로 PASS 판정을 받았다.
+- 이 결과는 합성 데이터의 기술적 완전성과 탐색적 청취 품질을 확인한 것이다.
+- 10개 표본 청취는 355개 전체의 자연스러움을 전수 보증하는 검사는 아니므로, 이후 CNN 학습 전·중에 이상 사례가 확인되면 해당 화자·규칙 조합을 추가 청취한다.
+- 연장 라벨은 합성 입력 텍스트에 기반한 프로젝트 내부 조작 라벨이며, 실제 개인의 불안도, 정신건강 상태, 면접 역량, 임상적 말더듬 또는 임상적 연장을 진단·판정하지 않는다.
