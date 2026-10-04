@@ -833,10 +833,53 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 - 위 기준은 `rate=0.85` 시간축 변환이 의도대로 적용되었는지를 확인하는
   프로젝트 내부 잠정 기술 기준이며, 임상적 말속도·느린 발화 판정 기준은 아니다.
 
+## 2026-10-04 - 청취 QC 진행 현황 
+
+### 대표 표본 청취 QC
+
+- 기술 QC PASS 426개 중 화자·문장 위치가 고르게 포함되도록 선정한
+  대표 표본 18개를 청취했다.
+- 청취 항목은 재생 가능 여부, 전역 감속의 일관성, 특정 음절·모음의
+  국소 연장처럼 들리는 구간 유무, 심한 금속성·울림·분절 왜곡 여부다.
+- 대표 표본 18개 중 16개는 `PASS`, 2개는 `HOLD`, `FAIL`은 0개였다.
+- 대표 표본 청취 결과는
+  `synthetic_v1/metadata/slow_normal_v1_listening_qc_sample.csv`에 기록했다.
+
+### HOLD 파일 및 전수 청취 전환 사유
+
+- `spkS080__sent_01__slow_normal_r085.wav`
+  - “안녕하세요.” 말미에서 원본에도 약한 길이 늘임이 들리지만,
+    slow-normal 변환 후에는 국소 연장처럼 지각될 가능성이 있어 `HOLD`로 기록했다.
+  - 문장 종결 위치의 자연스러운 운율적 길이 늘임인지, 모델 학습에서
+    국소 연장과 혼동될 수준인지 원본 normal_energy와 재비교가 필요하다.
+
+- `spkS080__sent_06__slow_normal_r085.wav`
+  - “더”가 강조 발화처럼 상대적으로 길게 들려 국소 연장과 혼동될
+    가능성이 있어 `HOLD`로 기록했다.
+
+- 대표 표본에서 `HOLD`가 2개 발생했으므로, `rate=0.85` 변환 파일
+  426개 전체를 청취 확인 없이 일괄적으로 `prolongation_label=0`으로
+  확정하지 않기로 결정했다.
+- 이에 따라 전체 slow-normal 파일을 순차 청취하고, 특이·보류·제외
+  후보를 추가 확인하는 전수 청취 QC로 전환한다.
+- 이 결정은 `rate=0.85` time-stretch 자체가 기술적으로 실패했다는
+  뜻이 아니라, 원본의 강조·문장 경계 말미 길이 늘임이 전역 감속 후
+  국소 연장과 혼동될 수 있는 사례를 보수적으로 제외하기 위한 것이다.
+
+### 전수 청취 QC 기록 방식
+
+- 전수 청취에서 특이사항 없이 적합한 파일은 별도 행을 추가하지 않는다.
+- 애매하거나 학습 반례로 부적절할 수 있는 파일만
+  `synthetic_v1/metadata/slow_normal_v1_listening_qc_review_log.csv`에
+  `HOLD` 또는 `FAIL`로 기록한다.
+- `HOLD`는 즉시 제외하지 않고 원본 normal_energy와 비교 재청취한 뒤
+  최종 `PASS` 또는 `FAIL`로 확정한다.
+- 청취 QC가 완료된 후에는 기술 QC PASS 및 최종 청취 PASS 파일만
+  `prolongation_label=0` slow-normal 학습 후보 manifest에 포함한다.
+
 ### 후속 작업
 
-- 대표 표본을 대상으로 청취 QC를 수행한다.
-- 청취 QC에서는 재생 가능 여부, 전역 감속의 일관성, 국소 연장처럼 들리는
-  구간의 유무, 심한 금속성·울림·분절 왜곡 여부를 기록한다.
-- 청취 QC 결과를 확정한 뒤 slow-normal v1을 prolongation 검출 학습용
-  `prolongation_label=0` 반례 후보로 확정한다.
+- slow-normal 426개를 순차 청취하고, HOLD·FAIL 후보를 review log에 기록한다.
+- HOLD 파일을 원본 normal_energy와 비교 재청취해 최종 PASS 또는 FAIL로 확정한다.
+- 최종 청취 PASS 파일을 기준으로 slow-normal v1 학습 후보 manifest를 생성한다.
+- 청취 QC 최종 결과와 포함·제외 수를 experiment log에 추가 기록한다.
