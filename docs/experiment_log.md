@@ -883,3 +883,91 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 - HOLD 파일을 원본 normal_energy와 비교 재청취해 최종 PASS 또는 FAIL로 확정한다.
 - 최종 청취 PASS 파일을 기준으로 slow-normal v1 학습 후보 manifest를 생성한다.
 - 청취 QC 최종 결과와 포함·제외 수를 experiment log에 추가 기록한다.
+
+
+## 2026-10-05 — tremor v1 파일럿: round2 문장 다양성 및 round3 강도 증강
+
+### 목적
+
+- 1차 파일럿에서 우선 후보로 선정된 `T04_clear_5p0`이 화자와 문장이 달라져도 자연스럽게 지각되는지 확인했다.
+- 2차 청취에서 S001·S002·S004의 tremor 지각성이 약하게 관찰되어, 동일한 5.0 Hz rate에서 F0·amplitude 변조폭만 증가한 조건을 추가 생성했다.
+- 본 기록의 T04·T05·T06 파라미터는 면접 음성 훈련용 합성 파일럿의 프로젝트 내부 탐색값이며, 임상 tremor·불안·질환의 진단 또는 중증도 기준이 아니다.
+
+### round2: 문장·화자 일반화 확인
+
+- 생성 스크립트: `src/v1/make_tremor_v1_pilot_round2.py`
+- 기술 QC 스크립트: `src/v1/qc_tremor_v1_pilot_round2.py`
+- 대상: `S001`~`S004` × `sent_01`·`sent_03`·`sent_06` × `T04_clear_5p0`
+- 생성 수: 4화자 × 3문장 × 1조건 = 12개 WAV
+- 출력 폴더: `data/_pilot_tremor_v1_round2/`
+- 매니페스트: `data/_pilot_tremor_v1_round2/tremor_v1_round2_manifest.csv`
+
+#### T04 합성 파라미터
+
+- `rate_hz=5.0`
+- `f0_depth_semitones=1.10`
+- `amplitude_depth=0.14`
+- `amplitude_phase_rad=0.0`
+- `rate_jitter_hz=0.12`
+
+#### round2 기술 QC 결과
+
+- 기술 QC 결과: 12/12 `PASS`
+- 검토 flag: 0개
+- QC CSV: `data/_pilot_tremor_v1_round2/tremor_v1_round2_technical_qc.csv`
+- QC 요약: `data/_pilot_tremor_v1_round2/tremor_v1_round2_technical_qc_summary.txt`
+- 조건별 평균:
+  - `mean_output_f0_sd_st=4.963993`
+  - `mean_f0_band_ratio=0.226222`
+  - `mean_amp_band_ratio=0.436415`
+- 해석: 위 3–7 Hz peak/band power ratio는 5 Hz 중심의 F0·amplitude 변조가 신호에서 분석 가능한지 확인하는 내부 기술 QC 지표다. 문장 고유의 억양 및 유성구간 단절의 영향을 받으므로, 조건의 지각적 강도 또는 임상 상태를 직접 의미하지 않는다.
+
+#### round2 청취 QC 결과
+
+- S003: `sent_01`, `sent_03`, `sent_06`에서 tremor가 상대적으로 적절하게 지각되었다.
+- S001, S002, S004: 세 문장에서 T04 tremor가 전반적으로 약하게 지각되었다.
+- 뚜렷한 click, pumping, 금속성, 분절 왜곡 등 합성 artifact는 청취에서 보고되지 않았다.
+- 결론: T04는 기술적으로 정상이나, 동일 고정 파라미터가 모든 화자에서 균일한 tremor 지각성을 제공하지 못했다. S003은 T04 유지 후보로, S001·S002·S004는 강도 증강 비교 대상으로 분류했다.
+
+### round3: S001·S002·S004 강도 증강 미니 파일럿
+
+- 생성 스크립트: `src/v1/make_tremor_v1_pilot_round3_boost.py`
+- 기술 QC 스크립트: `src/v1/qc_tremor_v1_pilot_round3_boost.py`
+- 대상: `S001`·`S002`·`S004` × `sent_01`
+- 비교 조건: `T05_boost_5p0`, `T06_strong_5p0`
+- 생성 수: 3화자 × 1문장 × 2조건 = 6개 WAV
+- 출력 폴더: `data/_pilot_tremor_v1_round3_boost/`
+- 매니페스트: `data/_pilot_tremor_v1_round3_boost/tremor_v1_round3_boost_manifest.csv`
+
+#### round3 합성 파라미터
+
+| condition_id | rate_hz | F0 depth | amplitude depth | amplitude phase |
+|---|---:|---:|---:|---:|
+| `T05_boost_5p0` | 5.0 | ±1.40 st | 0.18 | 0.0 rad |
+| `T06_strong_5p0` | 5.0 | ±1.70 st | 0.22 | 0.0 rad |
+
+- 두 조건 모두 `rate_jitter_hz=0.12`를 사용했다.
+- T05/T06 수치는 T04보다 변조폭을 점진적으로 증가시킨 프로젝트 내부 청취 비교용 탐색값이다.
+- rate를 5.0 Hz로 고정해, 청취 차이가 발생할 경우 rate보다 변조폭 변화의 영향을 우선 비교할 수 있도록 설계했다.
+
+#### round3 기술 QC 결과
+
+- 기술 QC 결과: 6/6 `PASS`
+- 검토 flag: 0개
+- QC CSV: `data/_pilot_tremor_v1_round3_boost/tremor_v1_round3_boost_technical_qc.csv`
+- QC 요약: `data/_pilot_tremor_v1_round3_boost/tremor_v1_round3_boost_technical_qc_summary.txt`
+- 현재 상태: 기술 QC 완료, T04·T05·T06 비교 청취 QC는 미완료.
+
+### 다음 작업
+
+- S001·S002·S004 각각에서 동일 문장 `sent_01`의 T04 → T05 → T06을 비교 청취한다.
+- 각 조건에 대해 tremor 지각성(약함/적절/과도), artifact 여부, 화자별 선택 조건을 기록한다.
+- 청취 결과를 바탕으로 S001·S002·S004에 적용할 보정 조건을 결정하거나, 필요 시 추가 강도 파일럿을 설계한다.
+- S003은 T04를 유지할 수 있는지 최종 프로젝트 정책과 데이터 균형을 고려해 결정한다.
+
+### 근거 및 해석 한계
+
+- Vocal tremor는 F0와 loudness/intensity의 준주기적 변조로 기술된다.
+- simulated tremor 연구에서 3·5·7 Hz 변조 조건이 사용되었으며, 본 프로젝트는 5 Hz를 합성 탐색 중심값으로 유지했다.
+- 문헌은 tremor 지각에 F0 및 intensity modulation extent가 중요할 수 있음을 제시하지만, 본 프로젝트의 F0 depth와 amplitude depth는 환자 음성을 그대로 재현한 임상 표준값이 아니다.
+- 본 파일럿의 3–7 Hz band ratio와 청취 결과는 합성 학습 데이터의 품질·지각성 확인을 위한 것으로, 개인의 불안, 질환, 또는 임상 tremor 여부·중증도를 판정하지 않는다.
