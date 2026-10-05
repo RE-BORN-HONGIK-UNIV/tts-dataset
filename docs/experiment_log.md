@@ -462,7 +462,7 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 - `spkS009`, `spkS010`에 같은 청취 기준을 적용한다.
 
 
-## spkS009 청취 QC
+### spkS009 청취 QC
 
 ### 대상
 - 화자: `spkS009`
@@ -491,7 +491,7 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
     - 사유: “조-오.오은”처럼 목표 구간이 끊겨 들림.
 
 
-## spkS010 청취 QC
+### spkS010 청취 QC
 
 ### 대상
 - 화자: `spkS010`
@@ -833,7 +833,7 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 - 위 기준은 `rate=0.85` 시간축 변환이 의도대로 적용되었는지를 확인하는
   프로젝트 내부 잠정 기술 기준이며, 임상적 말속도·느린 발화 판정 기준은 아니다.
 
-## 2026-10-04 - 청취 QC 진행 현황 
+## 2026-10-04 — 청취 QC 진행 현황 
 
 ### 대표 표본 청취 QC
 
@@ -971,3 +971,97 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 - simulated tremor 연구에서 3·5·7 Hz 변조 조건이 사용되었으며, 본 프로젝트는 5 Hz를 합성 탐색 중심값으로 유지했다.
 - 문헌은 tremor 지각에 F0 및 intensity modulation extent가 중요할 수 있음을 제시하지만, 본 프로젝트의 F0 depth와 amplitude depth는 환자 음성을 그대로 재현한 임상 표준값이 아니다.
 - 본 파일럿의 3–7 Hz band ratio와 청취 결과는 합성 학습 데이터의 품질·지각성 확인을 위한 것으로, 개인의 불안, 질환, 또는 임상 tremor 여부·중증도를 판정하지 않는다.
+
+## 2026-10-06 — round3 청취 QC 결과
+
+- 대상: S001·S002·S004 × `sent_01` × T04·T05·T06 비교
+- T04는 세 화자에서 공통적으로 tremor 지각성이 약했다.
+- T05와 T06은 세 화자에서 모두 적절한 tremor로 지각되었다.
+- T06은 T05보다 tremor가 더 명확하게 지각됐으나, 청취상 과도한 비브라토·기계적 진동·전달력 저하는 관찰되지 않았다.
+- T05와 T06의 뚜렷한 click, pumping, 금속성, 분절 왜곡은 관찰되지 않았다.
+- 결론: S001·S002·S004에는 T04 대신 T05와 T06을 파일 단위로 병행 적용하는 방안을 대량 생성 전 후보 정책으로 검토한다.
+- T05:T06의 초기 배분은 1:1을 잠정 제안하되, 이는 문헌 기반 임상 분포가 아니라 강도 다양성 확보를 위한 프로젝트 내부 균형값이다.
+- round3 기술 QC는 T05·T06 총 6개 파일에서 6/6 PASS였고, 검토 flag는 0개였다.
+- 현재 청취 결과는 S001·S002·S004 × `sent_01`에서만 확인된 결과이므로, 다른 문장 및 파일럿에 포함되지 않은 화자에 동일 정책을 일반화하기 전 추가 검증이 필요하다.
+- 대량 생성 시에는 출력 WAV별로 `speaker_id`, `sentence_id`, `condition_id`, `rate_hz`, `f0_depth_semitones`, `amplitude_depth`, 청취 QC 결과를 manifest에 기록한다.
+
+
+### round4 대표 화자 청취 QC 결과
+
+- 대상: S005·S011·S017·S024·S031·S038·S044·S050·S057·S065·S072·S080 × `sent_01` × T05·T06 비교
+- 생성 수: 12화자 × 1문장 × 2조건 = 24개 WAV
+- 기술 QC: 24/24 PASS, 검토 flag 0개
+- S005, S011, S017, S024, S031, S038, S044, S050, S057, S065, S072에서 T06의 tremor가 명확하게 지각되었고, 과도한 비브라토·기계적 진동·전달력 저하는 관찰되지 않았다.
+- S080은 강세가 강한 구간에서 T05·T06 모두 소리가 부자연스럽게 잡히는 현상이 관찰되어, 두 조건 모두 HOLD로 기록한다.
+- S080의 현상은 자동 기술 QC에서 flag로 검출되지 않은 국소적 청취 artifact 가능성이므로, 대량 생성 후보에서 우선 제외하고 원본 normal_energy와 A/B 비교 재청취한다.
+- 결론: T06_strong_5p0을 전체 tremor 대량 생성의 기본 후보로 선정한다. 단, S080은 별도 재검토가 완료될 때까지 대량 생성 대상에서 제외한다.
+- T05는 현재 대량 생성 기본 조건으로 사용하지 않고, 향후 tremor 강도 다양성 레벨을 추가할 때 보조 후보로 보존한다.
+- 본 결정은 파일럿 청취 및 내부 기술 QC에 근거한 프로젝트 내부 합성 정책이며, 임상 tremor·불안·질환의 진단 또는 중증도 기준이 아니다.
+- S080은 원본 normal_energy에도 강세가 강한 구간이 존재했다.
+- T05·T06 적용 후 해당 구간에서 강세·에너지 변화와 tremor 변조가 겹치며,
+  청취상 매우 부자연스러운 국소 artifact가 관찰되었다.
+- 이 현상은 자동 기술 QC에서는 flag로 검출되지 않았으나, 학습 데이터에
+  포함할 경우 비의도적 음향 패턴을 학습시킬 위험이 있어 S080은
+  tremor 대량 생성 대상에서 제외한다.
+- S080 원본 normal_energy 파일은 변경·삭제하지 않으며, tremor 파생본만
+  제외한다.
+
+### 2026-10-06 — Tremor v1 대량 생성 완료
+
+### 목적
+`normal_energy` 원본 음성에 tremor 합성 조건 `T06_strong_5p0`을 일괄 적용하여
+tremor v1 학습/평가용 파생 음성을 생성한다.
+
+### 실행 스크립트
+- `src/v1/generate_tremor_v1.py`
+
+### 입력
+- 입력 폴더: `G:\내 드라이브\tts_dataset\synthetic_v1\audio\normal_energy\`
+- 입력 파일 패턴: `*__normal_energy.wav`
+- 입력 원본 수: 426개
+- 구성: 71명 × 6문장
+
+### 적용 조건
+- condition ID: `T06_strong_5p0`
+- tremor rate: 5.0 Hz
+- rate jitter: 0.12 Hz
+- F0 modulation depth: ±1.70 semitone
+- amplitude modulation depth: 0.22
+- amplitude phase: 0.0 rad
+- WORLD frame period: 5.0 ms
+- F0 search range: 60–500 Hz
+- random seed: `20261006`
+
+> 위 파라미터는 round3/round4의 프로젝트 내부 파일럿 및 청취 QC를 바탕으로 선택한 합성 조건이다. 임상 vocal tremor의 진단 또는 중증도 판정 기준은 아니다.
+
+### 제외 처리
+- 제외 화자: `S080`
+- 제외 파일 수: 6개
+- 제외 사유: 원본의 강한 강세 구간과 tremor 변조가 결합할 때 국소 청취 artifact가 관찰됨
+- 원본 `normal_energy` 파일은 수정·삭제하지 않았음
+- 제외 상세: `synthetic_v1/metadata/tremor_v1_excluded_sources.csv`
+
+### 생성 결과
+- 생성 완료 WAV: 420개
+- 최종 구성: 70명 × 6문장
+- 출력 폴더: `G:\내 드라이브\tts_dataset\synthetic_v1\audio\tremor_v1\`
+- manifest: `G:\내 드라이브\tts_dataset\synthetic_v1\metadata\tremor_v1_manifest.csv`
+- 출력 형식: mono, PCM_16 WAV
+- 출력 파일명 형식:
+  `spkS001__sent_01__normal_energy__tremor_T06_strong_5p0.wav`
+
+### 생성 안전장치 및 결과
+- 생성 전 원본 426개, S080 제외 6개, 생성 대상 420개를 검증함
+- 기존 결과 파일 및 기존 CSV가 존재하면 덮어쓰지 않고 중단하도록 구현함
+- 출력 WAV마다 저장 후 읽기 가능 여부와 유한값 여부를 검사함
+- 실행 결과:
+  - `생성 완료: 420개 WAV`
+  - `제외 기록: 6개`
+- 생성 단계 오류 없이 완료됨
+
+### 다음 작업
+1. `src/v1/qc_tremor_v1.py`를 작성한다.
+2. manifest 기준으로 tremor 출력 420개만 전체 기술 QC한다.
+3. 길이, peak, RMS, 파일 손상 여부 및 변조 지표를 확인한다.
+4. QC flag 파일을 만들어 청취 검토 우선순위를 정한다.
+5. 기술 QC 통과 후 표본 청취 QC를 진행한다.
