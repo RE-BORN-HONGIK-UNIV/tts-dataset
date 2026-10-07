@@ -973,6 +973,52 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 - 본 파일럿의 3–7 Hz band ratio와 청취 결과는 합성 학습 데이터의 품질·지각성 확인을 위한 것으로, 개인의 불안, 질환, 또는 임상 tremor 여부·중증도를 판정하지 않는다.
 
 ## 2026-10-06 — round3 청취 QC 결과
+---
+
+## 2026-10-07 — Tremor v1 전체 기술 QC 1차 결과
+
+### 실행 스크립트
+- `src/v1/qc_tremor_v1.py`
+
+### 검사 대상 및 산출물
+- 검사 대상: `tremor_v1` WAV 420개
+- 입력 manifest: `synthetic_v1/metadata/tremor_v1_manifest.csv`
+- 파일별 QC 결과: `synthetic_v1/metadata/tremor_v1_qc.csv`
+- flag 목록: `synthetic_v1/metadata/tremor_v1_qc_flags.csv`
+- 요약: `synthetic_v1/metadata/tremor_v1_qc_summary.txt`
+
+### 1차 파일·파형 무결성 결과
+- 검사 수: 420개
+- hard fail: 0개
+- 원본-출력 길이 차이: 평균/중앙값/최소/최대 모두 0.0 ms
+- RMS 비율: 평균 0.9599, 중앙값 1.0000, 최소 0.6641, 최대 1.0000
+- 출력 peak: 평균 0.8802, 중앙값 0.9102, 최소 0.5373, 최대 0.9800
+- voiced ratio: 평균 0.7499, 중앙값 0.7587, 최소 0.5044, 최대 0.8993
+- peak > 0.99: 0개
+- RMS ratio < 0.70: 2개. 자동 제외하지 않고 원본-출력 쌍 청취 QC 대상으로 보류함
+
+### 변조율 분석 결과와 해석
+- F0 modulation off-target: 391개
+- amplitude modulation off-target: 355개
+- 기존 QC의 soft flag: 418개, flag 없음: 2개
+- F0 modulation rate: 평균 7.2386 Hz, 중앙값 10.0000 Hz, 범위 2.1505–10.0000 Hz
+- amplitude modulation rate: 평균 3.8806 Hz, 중앙값 2.6316 Hz, 범위 2.0000–10.0000 Hz
+
+현재 QC는 문장 전체의 F0 contour와 RMS envelope에 자기상관 기반 단일 지배 변조율을 적용했다. 그러나 연결 발화에는 무성구간, 휴지, 음절 리듬, 억양 변화 및 F0 추적 오차가 포함되어, 주입한 5 Hz tremor가 단일 지배 피크로 검출되지 않을 수 있다. F0 추정 중앙값이 탐색 상한인 10 Hz에 집중된 현상도 상한 포화형 추정 artifact로 해석한다.
+
+따라서 `f0_modulation_off_target` 및 `amplitude_modulation_off_target`는 현재 단계에서 생성 실패 또는 자동 제외 근거로 사용하지 않는다. 파일 무결성·시간 정합성·sample rate·peak 기준은 420개 전체 통과로 판정한다.
+
+### 근거
+- 연결 발화보다 지속 모음 또는 안정된 유성구간에서 F0 및 intensity tremor modulation rate/extent를 분석하는 방식이 널리 사용된다.
+- Sustained vowel 기반 연구에서 F0 및 intensity modulation rate는 각각 약 4.6 Hz, 5.2 Hz로 보고되었다.
+- 출처: [Perceptual and Acoustical Features of Dysarthria in Essential Tremor, 2026](https://tremorjournal.org/articles/10.5334/tohm.1180)
+- 출처: [Physiologic and Acoustic Patterns of Essential Vocal Tremor, Lester-Smith et al., 2013](https://experts.arizona.edu/en/publications/physiologic-and-acoustic-patterns-of-essential-vocal-tremor/)
+
+### 후속 조치
+1. RMS ratio < 0.70인 2개 파일을 원본-출력 쌍으로 청취한다.
+2. 연결 발화 전체의 단일 modulation-rate 기반 soft flag는 최종 합격/불합격 기준에서 제거한다.
+3. 이후 분석 지표는 연속 유성구간 기반 5 Hz 대역 power, F0/amplitude modulation extent, 청취 QC와 함께 해석한다.
+4. 1차 QC CSV와 summary는 재현 기록으로 보존한다.
 
 - 대상: S001·S002·S004 × `sent_01` × T04·T05·T06 비교
 - T04는 세 화자에서 공통적으로 tremor 지각성이 약했다.
@@ -1065,3 +1111,136 @@ tremor v1 학습/평가용 파생 음성을 생성한다.
 3. 길이, peak, RMS, 파일 손상 여부 및 변조 지표를 확인한다.
 4. QC flag 파일을 만들어 청취 검토 우선순위를 정한다.
 5. 기술 QC 통과 후 표본 청취 QC를 진행한다.
+
+
+---
+
+## 2026-10-07 — Tremor v1 전체 QC 및 수동 청취 검토
+
+### QC 목적
+`normal_energy` 원본을 기반으로 생성한 `tremor_v1` 420개에 대해 파일 무결성,
+원본-출력 정합성, 레벨, 변조 분석 및 flag 파일 청취 검토를 수행했다.
+
+### QC 스크립트 및 산출물
+- 실행 스크립트: `src/v1/qc_tremor_v1.py`
+- 검사 대상: `tremor_v1` WAV 420개
+- 입력 manifest: `synthetic_v1/metadata/tremor_v1_manifest.csv`
+- 파일별 QC 결과: `synthetic_v1/metadata/tremor_v1_qc.csv`
+- flag 목록: `synthetic_v1/metadata/tremor_v1_qc_flags.csv`
+- 요약: `synthetic_v1/metadata/tremor_v1_qc_summary.txt`
+
+### 1차 기술 QC 결과
+| 항목 | 결과 | 판정 |
+|---|---:|---|
+| 검사 파일 수 | 420개 | 완료 |
+| hard fail | 0개 | 통과 |
+| soft flag | 418개 | 변조율 자동 판정 과검출 포함 |
+| flag 없음 | 2개 | - |
+| 원본-출력 길이 차이 | 평균/중앙값/최소/최대 모두 0.0 ms | 통과 |
+| RMS 비율 | 평균 0.9599, 중앙값 1.0000, 범위 0.6641–1.0000 | 2개 청취 검토 |
+| 출력 peak | 평균 0.8802, 중앙값 0.9102, 범위 0.5373–0.9800 | 통과 |
+| voiced ratio | 평균 0.7499, 중앙값 0.7587, 범위 0.5044–0.8993 | 참고 지표 |
+
+### 변조율 flag 해석
+- F0 modulation off-target: 391개
+- amplitude modulation off-target: 355개
+- F0 modulation rate: 평균 7.2386 Hz, 중앙값 10.0000 Hz, 범위 2.1505–10.0000 Hz
+- amplitude modulation rate: 평균 3.8806 Hz, 중앙값 2.6316 Hz, 범위 2.0000–10.0000 Hz
+
+기존 QC는 문장 전체 F0 contour와 RMS envelope에서 자기상관 기반 단일 지배 변조율을 추정하여,
+5 Hz 합성 조건과의 차이를 soft flag로 표시했다. 그러나 연결 발화에는 무성구간, 휴지,
+음절 리듬, 억양 변화 및 F0 추적 오차가 포함되므로 주입된 5 Hz 변조가 문장 전체에서
+하나의 지배 피크로 검출되지 않을 수 있다. F0 modulation rate의 중앙값이 탐색 상한인
+10 Hz에 집중된 현상은 상한 포화형 추정 artifact로 해석한다.
+
+따라서 `f0_modulation_off_target` 및 `amplitude_modulation_off_target`는 생성 실패,
+자동 제외 또는 재생성의 근거로 사용하지 않는다. 이 값들은 연결 발화 기반 탐색 지표로만
+보존하며, 최종 판단에는 파일 무결성, 레벨 QC 및 청취 결과를 함께 사용한다.
+
+> **판정 기준 주의:** length 10 ms, peak 0.99, RMS ratio 0.70–1.30은 임상 vocal tremor 진단 기준이 아니라 본 프로젝트의 잠정 기술 QC 기준이다. 연결 발화에서 F0·intensity tremor rate를 단일 수치로 자동 판정하는 방식은 제한적이므로, flag는 청취 검토 우선순위로만 사용했다.
+
+### RMS 저하 후보 청취 QC
+
+RMS ratio < 0.70으로 flag된 파일은 2개였다. 두 파일 모두 원본과 tremor 출력의
+청취 비교를 수행했다.
+
+| 대상 | 원본 상태 | tremor 출력 청취 결과 | 결정 | 후속 조치 |
+|---|---|---|---|---|
+| `S028 / sent_01` | 원본 길이 약 8초. 약 4초 이후 목표 한국어 문장과 무관한 타 언어 추가 녹음 확인 | tremor 출력에도 원본 후반부 추가 음성이 포함될 가능성 있음 | 보류 | 원본 절단 가능 여부 검토 후 해당 원본 기반 파생본을 별도 버전으로 재생성 |
+| `S039 / sent_05` | normal_energy 원본은 내용·음질상 이상 없음 | “차분한 마음” 중 “차분한”의 강세 구간에서 국소적 음성 품질 이상 청취 | tremor 출력 제외 | tremor 조건 또는 국소 gain/F0 변조 방식을 조정한 후속 버전에서 재생성 여부 검토 |
+
+### S028/sent_01 영향 범위
+
+`S028 / sent_01`의 원본 내용 이상은 tremor QC 청취 과정에서 확인했다.
+현재 원본과 기존 파생본을 삭제·수정하지 않으며, 후반부 비목표 추가 음성 구간 절단 및
+파생본 재생성 여부는 별도 작업으로 보류한다.
+
+| 계열 | 확인된 파일 |
+|---|---|
+| normal_energy 원본 | `audio/normal_energy/spkS028__sent_01__normal_energy.wav` |
+| energy_fade_in | `audio/energy_fade_in/spkS028__sent_01__energy_fade_in.wav` |
+| energy_fade_out | `audio/energy_fade_out/spkS028__sent_01__energy_fade_out.wav` |
+| prolongation | `audio/prolongation/spkS028__sent_01__target_01__C.wav` |
+| slow_normal | `audio/slow_normal/spkS028__sent_01__slow_normal_r085.wav` |
+| tremor_v1 | `audio/tremor_v1/spkS028__sent_01__normal_energy__tremor_T06_strong_5p0.wav` |
+
+- S028의 `sent_02`~`sent_06` normal_energy 원본은 청취 확인 결과 정상으로 판단했다.
+- S028/sent_01 이슈 유형: `extra_non_target_speech_after_target_utterance`
+- 현재 상태: `source_content_review_pending_trim_and_regeneration`
+
+### 현 시점 데이터 상태
+
+| 구분 | 수량 | 상태 |
+|---|---:|---|
+| tremor v1 생성 완료 | 420개 | 생성 기록 보존 |
+| 파일 무결성 hard fail | 0개 | 전체 통과 |
+| 변조율 기반 soft flag | 418개 | 연결 발화 자동 추정 한계로 자동 제외 근거에서 제거 |
+| 원본 내용 이슈 보류 | 1개 | `S028 / sent_01` |
+| tremor 합성 artifact 제외 | 1개 | `S039 / sent_05` |
+| 현시점 즉시 사용 가능 후보 | 418개 | S028 보류 및 S039 제외를 반영한 잠정 수량 |
+
+### 참고 근거
+- Carbonell et al. (2015), *Discriminating Simulated Vocal Tremor Source Using Amplitude Envelope Spectral Measures*, *Journal of Voice*. F0 및 amplitude 변조를 포함한 simulated vocal tremor의 음향 분석을 다룸.  
+  https://pmc.ncbi.nlm.nih.gov/articles/PMC4361255/
+- Barkmeier-Kraemer & Clark (2010), *Conceptual and Clinical Updates on Vocal Tremor*, *The ASHA Leader*. Vocal tremor의 F0 및 intensity modulation rate에 대한 임상·음향적 논의.  
+  https://leader.pubs.asha.org/doi/10.1044/leader.FTR2.15142010.16
+- Lester-Smith et al. (2013), *Physiologic and Acoustic Patterns of Essential Vocal Tremor*, *Journal of Voice*. 지속 모음 기반으로 vocal tremor의 생리·음향 패턴을 분석함.  
+  https://experts.arizona.edu/en/publications/physiologic-and-acoustic-patterns-of-essential-vocal-tremor/
+
+### 다음 작업
+1. `S028 / sent_01`의 목표 문장이 약 4초 이전에 완전히 끝나는지 확인하고, 절단 시점 및 원본 교정 방식을 결정한다.
+2. 원본 교정이 확정되면 S028/sent_01 기반 파생본을 새 버전으로 재생성한다.
+3. `S039 / sent_05` tremor 출력은 현 버전에서 제외하고, 국소 강세 구간 artifact 완화 로직을 검토한다.
+4. 이후 QC 스크립트 개정 시 modulation-rate 값은 참고용 분석 열로 보존하되, 단일 off-target flag를 자동 제외 기준으로 사용하지 않는다.
+
+---
+
+### QC v2 실행 결과
+
+기존 QC v1에서 연결 발화 전체의 단일 modulation-rate를 soft flag로 사용하면서
+418개가 flag된 문제를 보완하기 위해 `qc_tremor_v1_v2.py`를 실행했다.
+
+- 실행 스크립트: `src/v1/qc_tremor_v1_v2.py`
+- 검사 대상: 420개
+- 파일별 결과: `synthetic_v1/metadata/tremor_v1_qc_v2.csv`
+- flag 목록: `synthetic_v1/metadata/tremor_v1_qc_v2_flags.csv`
+- 요약: `synthetic_v1/metadata/tremor_v1_qc_v2_summary.txt`
+- hard fail: 0개
+- soft flag: 2개
+- flag 없음: 418개
+
+QC v2에서는 `f0_modulation_off_target` 및
+`amplitude_modulation_off_target`를 자동 soft flag 조건에서 제거했다.
+F0/amplitude modulation rate와 voiced ratio는 참고 분석 열로만 보존했다.
+
+soft flag 2개는 RMS ratio < 0.70 후보이며, 이미 수동 청취 검토를 완료했다.
+- `S028 / sent_01`: 원본 후반부 비목표 추가 음성 이슈로 trim 및 재생성 검토 보류
+- `S039 / sent_05`: tremor 출력의 국소 강세 구간 artifact로 현 v1 출력 제외
+
+따라서 현재 tremor v1의 즉시 사용 가능 후보는 418개다.
+
+---
+
+### 수동 검토 결정 파일
+- 수동 청취 및 원본 내용 검토 결과는 `synthetic_v1/metadata/tremor_v1_manual_review.csv`에 기록했다.
+- `decision=hold` 및 `decision=exclude` 파일은 현시점 tremor v1의 즉시 사용 대상에서 제외한다.
