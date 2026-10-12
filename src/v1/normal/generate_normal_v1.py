@@ -93,16 +93,16 @@ generate_normal_v1.py — synthetic v1 normal 원본 426개 전체 생성
   프로젝트 root에서 실행한다.
 
   1) API 호출 없는 생성 계획 확인:
-      py src\\v1\\generate_normal_v1.py --dry-run
+      py src\\v1\\normal\\generate_normal_v1.py --dry-run
 
   2) API 크레딧 측정용 2개 생성:
-      py src\\v1\\generate_normal_v1.py --limit 2
+      py src\\v1\\normal\\generate_normal_v1.py --limit 2
 
   3) 전체 426개 생성:
-      py src\\v1\\generate_normal_v1.py
+      py src\\v1\\normal\\generate_normal_v1.py
 
   4) 기존 정상 파일까지 강제 재생성할 때만:
-      py src\\v1\\generate_normal_v1.py --overwrite
+      py src\\v1\\normal\\generate_normal_v1.py --overwrite
 
 =============================================================================
 """
@@ -253,12 +253,12 @@ def parse_args():
 def get_paths():
     """
     현재 파일 위치:
-      tts-dataset/src/v1/generate_normal_v1.py
+      tts-dataset/src/v1/normal/generate_normal_v1.py
 
-    parents[2]:
+    parents[3]:
       tts-dataset/  ← repository root
     """
-    repo_root = Path(__file__).resolve().parents[2]
+    repo_root = Path(__file__).resolve().parents[3]
 
     approved_speakers_csv = (
         repo_root

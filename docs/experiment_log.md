@@ -4,6 +4,8 @@
 
 이 문서는 `synthetic_v1` 데이터셋의 생성, 품질관리(QC), 주요 판단 및 결과를 기록한다.
 
+> 2026-10-13: 저장소 폴더 정리로 스크립트 위치가 바뀌어, 본문의 스크립트 경로를 새 위치로 갱신했다. 최종 스크립트는 `src/v1/<클래스>/`, 파일럿·탐색 스크립트는 `archive/` 아래에 있다. 기록 내용(실행 조건·결과)은 바꾸지 않았다.
+
 본 데이터셋은 고립청년 대상 대면 면접 훈련 서비스의 1단계 음성 분석 개발을 위한 합성 음성 데이터셋이다. 여기서 생성한 에너지 fade 라벨은 음성 신호의 점진적 에너지 변화 특성을 기술하기 위한 합성 라벨이며, 실제 개인의 불안도, 정신건강 상태 또는 면접 수행 능력을 진단하거나 판정하는 라벨이 아니다.
 
 ---
@@ -34,16 +36,16 @@
 
 ### 1. normal 음성 생성
 
-- 실행 스크립트: `src/v1/generate_normal_v1.py`
-- normal WAV 품질 점검 스크립트: `src/v1/qc_normal_wav.py`
-- normal QC 요약 스크립트: `src/v1/summarize_normal_qc.py`
-- clipping 후보 확인 스크립트: `src/v1/check_clipping_candidates.py`
+- 실행 스크립트: `src/v1/normal/generate_normal_v1.py`
+- normal WAV 품질 점검 스크립트: `src/v1/normal/qc_normal_wav.py`
+- normal QC 요약 스크립트: `src/v1/normal/summarize_normal_qc.py`
+- clipping 후보 확인 스크립트: `src/v1/normal/check_clipping_candidates.py`
 
 normal 음성을 기준 파일로 사용하고, 파일별로 fade-in 및 fade-out 파생본을 생성했다.
 
 ### 2. energy fade 파생본 생성
 
-- 실행 스크립트: `src/v1/generate_fade_variants.py`
+- 실행 스크립트: `src/v1/energy/generate_fade_variants.py`
 - 입력: `audio/normal_energy/`
 - 출력:
   - `audio/energy_fade_in/`
@@ -84,7 +86,7 @@ normal 음성을 기준 파일로 사용하고, 파일별로 fade-in 및 fade-ou
 
 ### 기술적 무결성 QC
 
-- 실행 스크립트: `src/v1/qc_fade_variants.py`
+- 실행 스크립트: `src/v1/energy/qc_fade_variants.py`
 - pair별 결과: `metadata/fade_qc_pairs.csv`
 - strength 요약: `metadata/fade_qc_strength_summary.csv`
 - 전체 요약: `metadata/fade_qc_summary.txt`
@@ -146,7 +148,7 @@ RMS는 짧은 구간에서의 평균적인 소리 세기 또는 신호 에너지
 
 ### REVIEW 원본 대비 재검증
 
-- 실행 스크립트: `src/v1/summarize_fade_qc_reviews.py`
+- 실행 스크립트: `src/v1/energy/summarize_fade_qc_reviews.py`
 - REVIEW pair 수: 11개
 - 원본 대비 기대 방향 shift 충족: 11개
 - 원본 대비 기대 방향 shift 미충족: 0개
@@ -271,7 +273,7 @@ energy_delta_shift_db
 ### 수행
 - 실제 면접 음성 `pr_14.wav`를 듣고, 단어 끝의 한 소리를 길게 끄는 구간을 대략 1.8~2.5초로 표시했다.
 - 동일한 합성 발화의 정상 TTS와 느린 정상 시험본(`rate=0.85`), 그리고 별개의 실제 면접 음성 `pr_14.wav`에서 청취로 표시한 구간을 파형·스펙트로그램으로 확대해 나란히 살펴봤다.
-- 탐색 코드: `compare_local_prolong.py`
+- 탐색 코드: `archive/prolongation_exploration/compare_local_prolong.py`
 - 결과 그림: `data/prolong/analysis_preview/local_prolong_comparison.png`
 
 ### 관찰
@@ -379,7 +381,7 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
   (`sent_02`는 B, 나머지 문장은 C)
 - 2차 위치: `sent_02`~`sent_06`에서 화자·문장에 따라 B 또는 C를 배정
 - 2차 `sent_01`의 `새로운`은 앞선 시험에서 자연스러움이 애매해 제외
-- 생성 코드: `generate_text_prolong_multispeaker_pilot.py`
+- 생성 코드: `archive/prolongation_exploration/generate_text_prolong_multispeaker_pilot.py`
 - 계획 출력에서 `새 생성 대상: 33개` 확인 후 생성 작업을 진행했다.
 - 이 단계는 71명 전체 대량 생성이 아니라 다화자 파일럿이다.
 
@@ -659,7 +661,7 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 
 ### 코드 수정 및 dry-run 검증
 
-- `src/v1/generate_prolongation_v1.py`에서 QC CSV의 자동 집계로 생성 규칙을 선택하던 로직을 제거했다.
+- `src/v1/prolongation/generate_prolongation_v1.py`에서 QC CSV의 자동 집계로 생성 규칙을 선택하던 로직을 제거했다.
 - 다화자 파일럿에서 동일 `(sentence_id, target_id, variant)`가 3명 모두 청취 통과한 5개 규칙을 코드 상수로 명시했다.
 - pilot manifest는 규칙 선택용이 아니라, 확정 규칙의 `variant_text`, `normal_text`, `target_original`을 읽어 실제 Typecast 입력 텍스트를 재현하는 용도로 유지했다.
 - `--dry-run` 결과:
@@ -692,7 +694,7 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 ### 자동 기술 QC
 
 - 자동 기술 QC 스크립트:
-  - `src/v1/qc_prolongation_v1.py`
+  - `src/v1/prolongation/qc_prolongation_v1.py`
 - QC는 WAV 원본을 수정·삭제하지 않고, 파일 수, 읽기 가능 여부, sample rate, channel 수, 길이, peak, 무음 비율을 검사했다.
 - 초기 실행에서는 QC 코드의 예상 sample rate가 `24000 Hz`로 설정되어 있어, 실제 파일 형식과 달라 355개 전체가 REVIEW로 표시되었다.
 - QC CSV에서 실제 sample rate를 집계한 결과, 355개 WAV 모두 `44100 Hz`임을 확인했다.
@@ -715,7 +717,7 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 
 - peak가 높은 23개 REVIEW 파일을 대상으로, 최대 진폭 근처에서 파형이 여러 샘플 동안 평평하게 이어지는 실제 clipping 의심 구간이 있는지 정밀 검사했다.
 - 정밀 검사 스크립트:
-  - `src/v1/check_prolongation_clipping.py`
+  - `src/v1/prolongation/check_prolongation_clipping.py`
 - 검사 기준:
   - `abs(sample) >= 0.999`인 near-full-scale 구간을 확인했다.
   - 1.0 ms 이상 연속된 평탄 구간이 있으면 REVIEW 대상으로 표시하도록 했다.
@@ -738,7 +740,7 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
   - 규칙: 5개
   - 총 표본 수: 10개
 - 청취 표본 목록 생성 스크립트:
-  - `src/v1/make_prolongation_v1_listening_sample.py`
+  - `src/v1/prolongation/make_prolongation_v1_listening_sample.py`
 - 청취 판정 기준:
   - `pass`: 목표 모음이 자연스럽고 연속적으로 길게 들림
   - `review`: 연속성·연장 강도·자연스러움이 애매함
@@ -812,7 +814,7 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 
 ### 기술 QC
 
-- QC 스크립트: `src/v1/qc_slow_normal_v1.py`
+- QC 스크립트: `src/v1/slow_normal/qc_slow_normal_v1.py`
 - QC 상세 결과: `synthetic_v1/metadata/slow_normal_v1_qc_report.csv`
 - QC 요약: `synthetic_v1/metadata/slow_normal_v1_qc_summary.txt`
 - 기술 QC 결과: **PASS 426 / FAIL 0**
@@ -895,8 +897,8 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 
 ### round2: 문장·화자 일반화 확인
 
-- 생성 스크립트: `src/v1/make_tremor_v1_pilot_round2.py`
-- 기술 QC 스크립트: `src/v1/qc_tremor_v1_pilot_round2.py`
+- 생성 스크립트: `archive/v1_pilots/make_tremor_v1_pilot_round2.py`
+- 기술 QC 스크립트: `archive/v1_pilots/qc_tremor_v1_pilot_round2.py`
 - 대상: `S001`~`S004` × `sent_01`·`sent_03`·`sent_06` × `T04_clear_5p0`
 - 생성 수: 4화자 × 3문장 × 1조건 = 12개 WAV
 - 출력 폴더: `data/_pilot_tremor_v1_round2/`
@@ -931,8 +933,8 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 
 ### round3: S001·S002·S004 강도 증강 미니 파일럿
 
-- 생성 스크립트: `src/v1/make_tremor_v1_pilot_round3_boost.py`
-- 기술 QC 스크립트: `src/v1/qc_tremor_v1_pilot_round3_boost.py`
+- 생성 스크립트: `archive/v1_pilots/make_tremor_v1_pilot_round3_boost.py`
+- 기술 QC 스크립트: `archive/v1_pilots/qc_tremor_v1_pilot_round3_boost.py`
 - 대상: `S001`·`S002`·`S004` × `sent_01`
 - 비교 조건: `T05_boost_5p0`, `T06_strong_5p0`
 - 생성 수: 3화자 × 1문장 × 2조건 = 6개 WAV
@@ -978,7 +980,7 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 ## 2026-10-07 — Tremor v1 전체 기술 QC 1차 결과
 
 ### 실행 스크립트
-- `src/v1/qc_tremor_v1.py`
+- `archive/v1_pilots/qc_tremor_v1.py`
 
 ### 검사 대상 및 산출물
 - 검사 대상: `tremor_v1` WAV 420개
@@ -1059,7 +1061,7 @@ B/C 표기로 생성·청취했다. 생성 파일은 `data/prolong/text_pilot/`�
 tremor v1 학습/평가용 파생 음성을 생성한다.
 
 ### 실행 스크립트
-- `src/v1/generate_tremor_v1.py`
+- `src/v1/tremor/generate_tremor_v1.py`
 
 ### 입력
 - 입력 폴더: `G:\내 드라이브\tts_dataset\synthetic_v1\audio\normal_energy\`
@@ -1106,7 +1108,7 @@ tremor v1 학습/평가용 파생 음성을 생성한다.
 - 생성 단계 오류 없이 완료됨
 
 ### 다음 작업
-1. `src/v1/qc_tremor_v1.py`를 작성한다.
+1. `archive/v1_pilots/qc_tremor_v1.py`를 작성한다.
 2. manifest 기준으로 tremor 출력 420개만 전체 기술 QC한다.
 3. 길이, peak, RMS, 파일 손상 여부 및 변조 지표를 확인한다.
 4. QC flag 파일을 만들어 청취 검토 우선순위를 정한다.
@@ -1122,7 +1124,7 @@ tremor v1 학습/평가용 파생 음성을 생성한다.
 원본-출력 정합성, 레벨, 변조 분석 및 flag 파일 청취 검토를 수행했다.
 
 ### QC 스크립트 및 산출물
-- 실행 스크립트: `src/v1/qc_tremor_v1.py`
+- 실행 스크립트: `archive/v1_pilots/qc_tremor_v1.py`
 - 검사 대상: `tremor_v1` WAV 420개
 - 입력 manifest: `synthetic_v1/metadata/tremor_v1_manifest.csv`
 - 파일별 QC 결과: `synthetic_v1/metadata/tremor_v1_qc.csv`
@@ -1218,9 +1220,9 @@ RMS ratio < 0.70으로 flag된 파일은 2개였다. 두 파일 모두 원본과
 ### QC v2 실행 결과
 
 기존 QC v1에서 연결 발화 전체의 단일 modulation-rate를 soft flag로 사용하면서
-418개가 flag된 문제를 보완하기 위해 `qc_tremor_v1_v2.py`를 실행했다.
+418개가 flag된 문제를 보완하기 위해 `src/v1/tremor/qc_tremor_v1_v2.py`를 실행했다.
 
-- 실행 스크립트: `src/v1/qc_tremor_v1_v2.py`
+- 실행 스크립트: `src/v1/tremor/qc_tremor_v1_v2.py`
 - 검사 대상: 420개
 - 파일별 결과: `synthetic_v1/metadata/tremor_v1_qc_v2.csv`
 - flag 목록: `synthetic_v1/metadata/tremor_v1_qc_v2_flags.csv`
@@ -1355,7 +1357,7 @@ soft flag 2개는 RMS ratio < 0.70 후보이며, 이미 수동 청취 검토를 
 | `S072` | `sent_05` | `spkS072__sent_05__target_01__C.wav` | 학습 제외 |
 
 ### 제외 파일 이동 및 기록
-- 사용 스크립트: `src/qc_exclude_prolongation.py`
+- 사용 스크립트: `src/v1/prolongation/qc_exclude_prolongation.py`
 - 미리보기 실행 후 실제 이동을 수행했다.
 - 지정한 8개 파일의 이동 완료를 사용자 확인으로 기록한다.
 - 보관 위치: `source_backups/excluded_prolongation_20261010/`

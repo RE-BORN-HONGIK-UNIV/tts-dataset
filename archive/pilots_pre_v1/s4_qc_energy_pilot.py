@@ -39,7 +39,7 @@ s4_qc_energy_pilot.py — 에너지변동 파일럿 자동 품질검사(QC)
   data/_pilot_energy20/qc_energy_pilot_summary.txt
 
 [실행]
-  python src/s4_qc_energy_pilot.py
+  python archive/pilots_pre_v1/s4_qc_energy_pilot.py
 =============================================================================
 """
 
@@ -55,7 +55,7 @@ import soundfile as sf
 # 0. 설정
 # ------------------------------------------------------------------
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_ROOT = os.path.join(REPO_ROOT, "data")
 PILOT_DIR = os.path.join(DATA_ROOT, "_pilot_energy20")
 

@@ -30,10 +30,10 @@ s3_screen_speakers.py — 본 생성 전 화자 스크리닝 음성 생성
 
 [실행]
   1. 크레딧을 사용하지 않는 대상 확인
-     python src/s3_screen_speakers.py --dry-run
+     python archive/pilots_pre_v1/s3_screen_speakers.py --dry-run
 
   2. 실제 합성 실행
-     python src/s3_screen_speakers.py
+     python archive/pilots_pre_v1/s3_screen_speakers.py
 
   3. 다시 실행
      이미 WAV가 있고 결과 CSV에 기록된 화자는 건너뛰고 이어서 생성한다.
@@ -65,8 +65,8 @@ load_dotenv()
 
 SCRIPT_VERSION = "speaker_screening_v1"
 
-# 코드 파일(src/)의 한 칸 위가 저장소 루트다.
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# 코드 파일(archive/pilots_pre_v1/)의 두 칸 위가 저장소 루트다.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_ROOT = os.path.join(REPO_ROOT, "data")
 CANDIDATES_CSV = os.path.join(DATA_ROOT, "voice_candidates.csv")
 
@@ -142,7 +142,7 @@ def load_candidates():
     if not os.path.exists(CANDIDATES_CSV):
         sys.exit(
             f"[오류] 후보 목록이 없습니다: {CANDIDATES_CSV}\n"
-            "src/s1_check_voices.py를 먼저 실행한다."
+            "archive/pilots_pre_v1/s1_check_voices.py를 먼저 실행한다."
         )
 
     with open(CANDIDATES_CSV, newline="", encoding="utf-8-sig") as f:

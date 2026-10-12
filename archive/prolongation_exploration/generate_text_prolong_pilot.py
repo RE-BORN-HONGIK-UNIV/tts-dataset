@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "src" / "v1"))
+sys.path.insert(0, str(ROOT / "src" / "v1" / "normal"))
 
 from generate_normal_v1 import load_approved_speakers, synthesize  # noqa: E402
 

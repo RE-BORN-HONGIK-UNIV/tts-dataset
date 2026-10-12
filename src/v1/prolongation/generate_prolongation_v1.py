@@ -22,13 +22,13 @@ generate_prolongation_v1.py — synthetic_v1 연장(prolongation) TTS v1 생성
 
 [실행]
 - API 호출 없이 입력·경로·355개 계획만 검증:
-    py src\v1\generate_prolongation_v1.py --dry-run
+    py src\v1\prolongation\generate_prolongation_v1.py --dry-run
 - 실제 TTS 2개만 시험 생성:
-    py src\v1\generate_prolongation_v1.py --limit 2
+    py src\v1\prolongation\generate_prolongation_v1.py --limit 2
 - 전체 355개 생성:
-    py src\v1\generate_prolongation_v1.py
+    py src\v1\prolongation\generate_prolongation_v1.py
 - 기존 연장 WAV까지 강제 재생성:
-    py src\v1\generate_prolongation_v1.py --overwrite
+    py src\v1\prolongation\generate_prolongation_v1.py --overwrite
 
 [안전 및 해석 한계]
 - --dry-run은 API 호출, WAV 저장, CSV 저장을 하지 않는다.
@@ -140,7 +140,7 @@ def get_paths():
     주의:
     drive_root는 generate_normal_v1.py의 실제 설정값과 정확히 같아야 한다.
     """
-    repo_root = Path(__file__).resolve().parents[2]
+    repo_root = Path(__file__).resolve().parents[3]
 
     approved_speakers_csv = (
         repo_root

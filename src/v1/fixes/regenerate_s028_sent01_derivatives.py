@@ -17,9 +17,15 @@ import csv
 import hashlib
 import json
 import shutil
+import sys
 
 import numpy as np
 import soundfile as sf
+
+# 생성 스크립트들은 src/v1/<클래스>/ 폴더에 나뉘어 있으므로 import 경로에 추가한다.
+V1_DIR = Path(__file__).resolve().parents[1]
+for module_dir in ("energy", "slow_normal", "tremor"):
+    sys.path.insert(0, str(V1_DIR / module_dir))
 
 import generate_fade_variants as fade
 import generate_slow_normal_v1 as slow

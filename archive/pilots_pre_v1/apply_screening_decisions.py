@@ -18,7 +18,7 @@ apply_screening_decisions.py — 1차 화자 청취 판정을 screening_results.
   합성 데이터 원본 화자로서의 적합성을 기록하는 품질 관리 도구다.
 
 [실행]
-  python tools/apply_screening_decisions.py
+  python archive/pilots_pre_v1/apply_screening_decisions.py
 =============================================================================
 """
 
@@ -33,7 +33,7 @@ from collections import Counter
 # 0. 경로
 # ------------------------------------------------------------------
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 RESULTS_CSV = os.path.join(
     REPO_ROOT,
     "data",
@@ -96,7 +96,7 @@ def main():
         sys.exit(
             f"[오류] 스크리닝 결과 CSV가 없습니다.\n"
             f"경로: {RESULTS_CSV}\n"
-            "src/s3_screen_speakers.py를 먼저 실행한다."
+            "archive/pilots_pre_v1/s3_screen_speakers.py를 먼저 실행한다."
         )
 
     with open(RESULTS_CSV, newline="", encoding="utf-8-sig") as f:

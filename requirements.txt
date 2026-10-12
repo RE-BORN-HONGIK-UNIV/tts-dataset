@@ -8,3 +8,18 @@ python-dotenv>=1.0.0
 soundfile>=0.12.1
 # 게인 엔벨로프 연산, RMS 측정
 numpy>=1.24.0
+# slow_normal time-stretch, tremor/QC 신호 분석
+librosa>=0.10.0
+# tremor 생성(저역 통과 필터 등)
+scipy>=1.10.0
+
+# ------------------------------------------------------------
+# 선택 설치: 특정 스크립트에서만 필요하다.
+# 학습용 코랩 환경에서는 설치하지 않아도 된다.
+# ------------------------------------------------------------
+# tremor 생성·QC(src/v1/tremor/)의 WORLD 분석.
+#   Windows: pip install pyworld-prebuilt   / Linux: pip install pyworld
+# pyworld
+# archive/ 의 tremor 파일럿 QC, prolongation 탐색 그래프
+# pandas
+# matplotlib

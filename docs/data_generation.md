@@ -20,7 +20,7 @@
 ### 입력
 - `metadata/speakers_approved_71.csv`
 - `.env`의 Typecast API 인증 정보
-- `src/v1/generate_prolongation_v1.py`의 `PROLONGATION_RULES`
+- `src/v1/prolongation/generate_prolongation_v1.py`의 `PROLONGATION_RULES`
 
 ### 출력
 - `audio/prolongation/`
@@ -67,11 +67,11 @@ spkS006__sent_01__target_01__C.wav
 
 ## 7. 재현 방법
 ```bash
-python src/v1/generate_prolongation_v1.py
-python src/v1/generate_prolongation_v1.py --run
+python src/v1/prolongation/generate_prolongation_v1.py --dry-run
+python src/v1/prolongation/generate_prolongation_v1.py
 ```
 
-- 첫 번째 명령은 생성 계획 및 manifest를 점검한다.
-- 두 번째 명령은 실제 API 호출 및 WAV 저장을 수행한다.
+- 첫 번째 명령(`--dry-run`)은 API 호출 없이 입력·경로·생성 계획만 점검한다.
+- 두 번째 명령(옵션 없음)은 실제 API 호출 및 WAV 저장을 수행한다. `--limit N`으로 앞 N개만 처리할 수 있다.
 - 이미 정상 생성된 파일은 skip한다.
 - 생성 이후에는 `docs/qc_protocol.md`에 따라 QC를 수행한다.

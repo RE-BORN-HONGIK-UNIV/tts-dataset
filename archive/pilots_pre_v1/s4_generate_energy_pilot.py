@@ -50,10 +50,10 @@ s4_generate_energy_pilot.py — 자연 길이 normal·energy 쌍 파일럿 생�
 
 [실행]
   1. 대상·화자·패턴·저장 경로만 확인한다. Typecast 크레딧을 사용하지 않는다.
-     python src/s4_generate_energy_pilot.py --dry-run
+     python archive/pilots_pre_v1/s4_generate_energy_pilot.py --dry-run
 
   2. 실제 생성한다. Typecast 합성 호출이 발생한다.
-     python src/s4_generate_energy_pilot.py
+     python archive/pilots_pre_v1/s4_generate_energy_pilot.py
 =============================================================================
 """
 
@@ -78,7 +78,7 @@ load_dotenv()
 
 SCRIPT_VERSION = "energy_pilot_natural_v1"
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_ROOT = os.path.join(REPO_ROOT, "data")
 SCREENING_CSV = os.path.join(
     DATA_ROOT,

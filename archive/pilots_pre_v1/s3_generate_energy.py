@@ -83,11 +83,11 @@ load_dotenv()
 # ------------------------------------------------------------------
 # --- 저장 위치 -------------------------------------------------------
 # 데이터 폴더 위치
-#   코드 파일(src/)의 한 칸 위 = repo 폴더, 그 안의 data/ 를 쓴다.
+#   코드 파일(archive/pilots_pre_v1/)의 두 칸 위 = repo 폴더, 그 안의 data/ 를 쓴다.
 #   C:\... 같은 절대경로를 쓰지 않는 이유: repo 를 다른 곳(예: OneDrive 밖)으로
 #   옮겨도 코드를 고칠 필요가 없고, 어디서 실행하든 같은 폴더를 가리킨다.
 #   data/ 는 .gitignore 에 들어 있어 GitHub 에 올라가지 않는다(음성 용량 문제).
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_ROOT = os.path.join(REPO_ROOT, "data")
 BATCH_NAME = "v4"   # data/energy/v4/ 에 저장
 OUTPUT_DIR = os.path.join(DATA_ROOT, "energy", BATCH_NAME)

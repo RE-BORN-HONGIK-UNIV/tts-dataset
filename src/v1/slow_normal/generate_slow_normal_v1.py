@@ -22,13 +22,13 @@ generate_slow_normal_v1.py — synthetic_v1 slow-normal v1 대량생성
 
 [실행]
 - API 호출 없이 입력·경로·426개 생성 계획만 확인:
-    py src\v1\generate_slow_normal_v1.py --dry-run
+    py src\v1\slow_normal\generate_slow_normal_v1.py --dry-run
 - 앞에서 2개만 실제 생성:
-    py src\v1\generate_slow_normal_v1.py --limit 2
+    py src\v1\slow_normal\generate_slow_normal_v1.py --limit 2
 - 전체 426개 생성:
-    py src\v1\generate_slow_normal_v1.py
+    py src\v1\slow_normal\generate_slow_normal_v1.py
 - 기존 slow-normal WAV도 강제로 다시 생성:
-    py src\v1\generate_slow_normal_v1.py --overwrite
+    py src\v1\slow_normal\generate_slow_normal_v1.py --overwrite
 
 [파일럿 근거]
 - `rate=0.85`는 normal 원본 3개 파일럿에서 청취상 문장 전체가

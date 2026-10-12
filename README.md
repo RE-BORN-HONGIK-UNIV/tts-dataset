@@ -281,96 +281,176 @@ class balance: normal_energy / energy_fade_in / energy_fade_out 비율
 ```text
 .
 ├── README.md
-├── docs/
-│   ├── data_and_training_design.md
-│   ├── labeling_guideline.md
-│   ├── dataset_schema.md
-│   ├── experiment_log.md
-│   └── decision_log.md
-├── src/
-│   ├── pilots/
-│   │   ├── s1_check_voices.py
-│   │   ├── s2_generate_normal_pilot.py
-│   │   ├── s3_generate_energy.py
-│   │   ├── s3_screen_speakers.py
-│   │   ├── s4_build_master_metadata.py
-│   │   ├── s4_generate_energy_pilot.py
-│   │   └── s4_qc_energy_pilot.py
-│   └── v1/
-│       ├── generate_normal_v1.py
-│       ├── qc_normal_wav.py
-│       ├── summarize_normal_qc.py
-│       ├── check_clipping_candidates.py
-│       ├── generate_fade_variants.py
-│       ├── qc_fade_variants.py
-│       └── summarize_fade_qc_reviews.py
-├── configs/
-├── data/
-│   ├── README.md
-│   ├── metadata/
-│   └── sample/
-├── notebooks/
-├── results/
 ├── requirements.txt
-└── .gitignore
+├── .gitignore
+├── docs/                          # 설계·생성·QC 문서와 실험 로그
+│   ├── data_and_training_design.md
+│   ├── data_generation.md
+│   ├── parameter_rationale.md
+│   ├── qc_protocol.md
+│   └── experiment_log.md
+├── metadata/                      # Git에 남기는 작은 기록 파일
+│   └── prolong_multispeaker_pilot_qc.csv
+├── src/v1/                        # synthetic_v1 최종 생성·QC 스크립트 (클래스별)
+│   ├── normal/                    # normal_energy 원본 TTS 생성 (모든 파생의 기준)
+│   │   ├── generate_normal_v1.py
+│   │   ├── qc_normal_wav.py
+│   │   ├── summarize_normal_qc.py
+│   │   └── check_clipping_candidates.py
+│   ├── energy/                    # energy_fade_in / energy_fade_out 파생
+│   │   ├── generate_fade_variants.py
+│   │   ├── qc_fade_variants.py
+│   │   └── summarize_fade_qc_reviews.py
+│   ├── slow_normal/               # 느린 정상 발화 (prolongation 음성 대조군)
+│   │   ├── generate_slow_normal_v1.py
+│   │   ├── qc_slow_normal_v1.py
+│   │   ├── make_slow_normal_listening_qc_sample.py
+│   │   └── make_slow_normal_listening_qc_review_log.py
+│   ├── tremor/                    # tremor 파생 (WORLD 기반 F0·진폭 변조)
+│   │   ├── generate_tremor_v1.py
+│   │   └── qc_tremor_v1_v2.py
+│   ├── prolongation/              # prolongation TTS 생성 (텍스트 기반, 독립 생성)
+│   │   ├── generate_prolongation_v1.py
+│   │   ├── qc_prolongation_v1.py
+│   │   ├── check_prolongation_clipping.py
+│   │   ├── make_prolongation_v1_listening_sample.py
+│   │   └── qc_exclude_prolongation.py
+│   └── fixes/                     # 개별 파일 사후 교정 (S028/sent_01)
+│       ├── make_s028_sent01_trim_candidates.py
+│       ├── make_s028_sent01_trim_corrected.py
+│       ├── regenerate_s028_sent01_derivatives.py
+│       └── apply_s028_sent01_rebuild.py
+├── tools/
+│   └── measure_energy_envelope.py # WAV 에너지 포락선 측정 도구 (생성 없음)
+├── archive/                       # 파일럿·탐색 스크립트 보관 (실행용 아님, archive/README.md 참고)
+│   ├── pilots_pre_v1/
+│   ├── prolongation_exploration/
+│   └── v1_pilots/
+└── data/                          # 로컬 전용, Git 제외
 ```
 
-생성된 전체 WAV와 상세 생성·QC 결과 파일은 용량 및 데이터 관리 정책상 Git에서 제외합니다. 코드가 참조하는 데이터셋 루트는 로컬 또는 Drive의 `synthetic_v1`이며, 공개 저장소에는 비식별 예시, 스키마, 코드, 문서 및 집계 결과만 포함합니다.
+### 데이터 위치
 
-### 데이터 보안
+코드는 두 곳의 데이터를 사용합니다. 둘 다 GitHub에는 올라가지 않습니다.
+
+| 위치 | 내용 |
+|---|---|
+| `data/` (저장소 안, 로컬) | 화자 스크리닝 결과 `data/_speaker_screening/approved_speakers_v1.csv`, prolongation 탐색 결과 `data/prolong/`, 각종 `_pilot_*` 폴더 |
+| `G:\내 드라이브\tts_dataset\synthetic_v1\` (Google Drive) | 최종 데이터셋. 코랩에서는 `/content/drive/MyDrive/tts_dataset/synthetic_v1/` |
+
+`synthetic_v1` 구조:
+
+```text
+synthetic_v1/
+├── audio/
+│   ├── normal_energy/        # 426
+│   ├── energy_fade_in/       # 426
+│   ├── energy_fade_out/      # 426
+│   ├── slow_normal/          # 426
+│   ├── tremor_v1/            # 420 (S080 제외)
+│   ├── prolongation/         # 355 생성 → 청취 QC 후 8개 제외
+│   └── normal_energy_corrected_v1/   # S028/sent_01 교정 원본 기록
+├── metadata/                 # 생성 manifest·로그, QC 결과 CSV
+├── qc/                       # prolongation 기술 QC·청취 샘플
+├── qc_review/                # 청취 검토·교정 작업 폴더
+└── source_backups/           # 교체·제외 전 원본 백업
+```
+
+> 생성·QC 스크립트의 Drive 경로는 Windows 작업 PC 기준(`G:\내 드라이브\...`)으로 하드코딩되어 있습니다.
+> 학습 코드는 이 스크립트를 실행하지 않고 Drive의 `synthetic_v1`만 읽습니다.
+
+---
+
+## 9. 실행 순서
+
+모든 명령은 저장소 루트에서 실행합니다.
+
+### 9.0 사전 준비
+
+```bash
+pip install -r requirements.txt
+```
+
+- 저장소 루트에 `.env`를 만들고 `TYPECAST_API_KEY=...`를 넣습니다. (Typecast TTS 생성 단계에만 필요)
+- `data/_speaker_screening/approved_speakers_v1.csv` (승인 화자 71명)가 있어야 합니다.
+  이 파일은 `archive/pilots_pre_v1/`의 화자 스크리닝 단계에서 만들어졌습니다.
+
+### 9.1 전체 흐름
+
+```text
+[normal]       generate_normal_v1 ─▶ qc_normal_wav ─▶ summarize_normal_qc / check_clipping_candidates
+                   │
+                   ├─▶ [energy]       generate_fade_variants ─▶ qc_fade_variants ─▶ summarize_fade_qc_reviews
+                   ├─▶ [slow_normal]  generate_slow_normal_v1 ─▶ qc_slow_normal_v1 ─▶ 청취 QC 샘플/기록
+                   └─▶ [tremor]       generate_tremor_v1 ─▶ qc_tremor_v1_v2 ─▶ 수동 검토
+
+[prolongation] generate_prolongation_v1 ─▶ qc_prolongation_v1 ─▶ check_prolongation_clipping
+               (normal과 독립)            ─▶ make_prolongation_v1_listening_sample ─▶ 전수 청취 ─▶ qc_exclude_prolongation
+
+[fixes]        S028/sent_01 교정: trim 후보 ─▶ 교정 원본 ─▶ 파생본 재생성 ─▶ 교체 적용
+```
+
+energy·slow_normal·tremor는 `audio/normal_energy/`를 입력으로 쓰므로 normal 단계가 먼저 끝나야 합니다.
+
+### 9.2 단계별 명령
+
+| 순서 | 명령 | 입력 → 출력 (`synthetic_v1/` 기준) |
+|---|---|---|
+| 1 | `python src/v1/normal/generate_normal_v1.py --dry-run` → 옵션 없이 실행 | 승인 화자 CSV, `.env` → `audio/normal_energy/`, `metadata/generation_log.csv` |
+| 2 | `python src/v1/normal/qc_normal_wav.py` | `audio/normal_energy/` → `metadata/normal_qc.csv` |
+| 3 | `python src/v1/normal/summarize_normal_qc.py`, `check_clipping_candidates.py` | `metadata/normal_qc.csv` → 터미널 요약, `metadata/clipping_check.csv` |
+| 4 | `python src/v1/energy/generate_fade_variants.py` (`--smoke-test`로 12개만 시험) | `audio/normal_energy/` → `audio/energy_fade_in/`, `audio/energy_fade_out/`, `metadata/fade_strength_manifest.csv` |
+| 5 | `python src/v1/energy/qc_fade_variants.py` → `summarize_fade_qc_reviews.py` | → `metadata/fade_qc_pairs.csv`, `fade_qc_summary.txt` |
+| 6 | `python src/v1/slow_normal/generate_slow_normal_v1.py --dry-run` → 옵션 없이 실행 | `audio/normal_energy/` → `audio/slow_normal/`, `metadata/slow_normal_v1_manifest.csv` |
+| 7 | `python src/v1/slow_normal/qc_slow_normal_v1.py` | → `metadata/slow_normal_v1_qc_report.csv` |
+| 8 | `make_slow_normal_listening_qc_sample.py`, `make_slow_normal_listening_qc_review_log.py` | → 청취 QC 샘플·검토 기록 CSV |
+| 9 | `python src/v1/tremor/generate_tremor_v1.py` | `audio/normal_energy/` → `audio/tremor_v1/`, `metadata/tremor_v1_manifest.csv` |
+| 10 | `python src/v1/tremor/qc_tremor_v1_v2.py` | → `metadata/tremor_v1_qc_v2*.csv` (수동 검토는 `tremor_v1_manual_review.csv`) |
+| 11 | `python src/v1/prolongation/generate_prolongation_v1.py --dry-run` → 옵션 없이 실행 | 승인 화자 CSV, `data/prolong/**/multispeaker_pilot_manifest.csv` → `audio/prolongation/`, `metadata/prolongation_v1_manifest.csv` |
+| 12 | `python src/v1/prolongation/qc_prolongation_v1.py` → `check_prolongation_clipping.py` | → `qc/prolongation_v1_technical_qc.csv`, `qc/prolongation_v1_clipping_check.csv` |
+| 13 | `python src/v1/prolongation/make_prolongation_v1_listening_sample.py` | → `qc/prolongation_v1_listening_sample.csv` |
+| 14 | `python src/v1/prolongation/qc_exclude_prolongation.py` (기본 미리보기, 파일 안 `DRY_RUN = False`로 실제 이동) | 청취 제외 8개 → `source_backups/`, `qc_review/` |
+| 15 | `src/v1/fixes/` 4개 스크립트 (파일명 순서: trim_candidates → trim_corrected → regenerate → apply) | S028/sent_01 교정. `apply`는 `APPLY` 입력 확인 후 교체 |
+
+- 14, 15단계는 **이미 실행이 끝난 1회성 작업**이며 기록 보존용으로 남겨 두었습니다. 다시 실행하지 마세요.
+- 각 단계의 조건·결과·예외 판단은 [`docs/experiment_log.md`](docs/experiment_log.md)에 날짜순으로 기록되어 있습니다.
+
+---
+
+## 10. 데이터 보안
 
 실제 원본 음성은 GitHub에 업로드하지 않습니다. 실제 음성에는 화자 식별 가능성이 있을 수 있으므로 동의 범위, 접근 권한 및 보관 정책을 별도로 관리해야 합니다.
 
 GitHub에는 다음만 포함합니다.
 
-- 데이터셋 구조와 익명화된 metadata 예시
-- 데이터 생성·전처리·학습·평가 코드
-- 문서와 설정 파일
+- 데이터 생성·QC 코드
+- 문서와 작은 기록 파일(`metadata/`)
 - 집계된 실험 결과
-- 공개 가능한 합성 샘플 또는 비식별 예시
 
-`.gitignore`에는 원본 음성, 모델 가중치 및 개별 실험 산출물을 포함합니다.
+`.gitignore`는 다음을 제외합니다. 전체 내용은 [`.gitignore`](.gitignore)를 참고하세요.
 
-```gitignore
-# Private or raw audio
-data/raw/
-data/private/
-*.wav
-*.mp3
-*.flac
-*.m4a
-
-# Models and experiment outputs
-models/
-checkpoints/
-runs/
-wandb/
-mlruns/
-
-# Local environment
-.venv/
-venv/
-.env
-__pycache__/
-*.py[cod]
-.ipynb_checkpoints/
-```
+- `.env` 등 API 키·인증 파일
+- `data/` 폴더 전체와 모든 음성 파일(`*.wav`, `*.mp3` 등), 스프레드시트(`*.xlsx`)
+- 모델 가중치·체크포인트, 학습 로그
+- `__pycache__/`, 가상환경(`.venv/`), `.ipynb_checkpoints/`
 
 ---
 
-## 9. 문서
+## 11. 문서
 
 | 문서 | 역할 |
 |---|---|
 | [데이터·라벨링·학습·평가 설계서](docs/data_and_training_design.md) | 연구 데이터, 라벨, 학습 및 평가 설계의 상세 정의 |
-| [라벨링 가이드라인](docs/labeling_guideline.md) | 실제 음성 청취 검증과 라벨 부여 절차 |
-| [데이터셋 스키마](docs/dataset_schema.md) | 파일명, metadata 컬럼, 라벨 및 데이터 구조 정의 |
+| [데이터 생성](docs/data_generation.md) | prolongation v1 생성 규칙과 재현 방법 |
+| [파라미터 근거](docs/parameter_rationale.md) | 생성 파라미터 선택 근거 |
+| [QC 프로토콜](docs/qc_protocol.md) | 기술 QC와 청취 QC 절차 |
 | [실험 로그](docs/experiment_log.md) | 생성, QC, 실행 결과, 예외 검토 및 변경 이력 |
-| [의사결정 기록](docs/decision_log.md) | 주요 설계 선택, 근거, 대안 및 변경 결정 |
+| 라벨링 가이드라인 (작성 예정) | 실제 음성 청취 검증과 라벨 부여 절차 |
+| 데이터셋 스키마 (작성 예정) | 파일명, metadata 컬럼, 라벨 및 데이터 구조 정의 |
 
 ---
 
-## 10. 발표용 핵심 메시지
+## 12. 발표용 핵심 메시지
 
 ```text
 실제 음성 데이터는 적고 세부 방향 라벨이 제한적입니다.
@@ -384,7 +464,7 @@ __pycache__/
 
 ---
 
-## 11. 참고 문헌
+## 13. 참고 문헌
 
 ### 자동 운율 라벨링과 수동 검증
 
