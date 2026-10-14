@@ -118,3 +118,8 @@ config.local.json
 .DS_Store
 Thumbs.db
 Desktop.ini
+# Claude Code 관련 파일 (깃 제외)
+CLAUDE.md
+.claude/
+.agents/
+skills-lock.json
