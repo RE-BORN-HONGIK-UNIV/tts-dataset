@@ -1400,3 +1400,12 @@ soft flag 2개는 RMS ratio < 0.70 후보이며, 이미 수동 청취 검토를 
 - 전체 검토 완료 후 기존 메타데이터 구조를 확인하고,
   제외 판정을 반영한 최종 학습용 manifest를 생성한다.
 - 현 단계에서는 전체 계열의 최종 학습 파일 수를 확정하지 않는다.
+---
+
+## 2026-10-17 — WORLD 재합성 정상(world_resynth_normal) 420개 생성
+
+- 목적: 떨림 모델의 '아님' 쪽에도 WORLD 재합성 흔적을 넣어 "WORLD 소리 = 떨림" 지름길을 끊는다(voice-cnn 「떨림 모델 학습 재료 확정」 결정).
+- 스크립트: `src/v1/tremor/generate_world_resynth_v1.py` (generate_tremor_v1.py의 합성 과정을 그대로 쓰고 F0·amplitude 변조 깊이만 0)
+- 원본: tremor v1과 같은 normal_energy 420개(S080 제외)
+- 출력: `synthetic_v1/audio/world_resynth_normal/` 420개, 매니페스트 `synthetic_v1/metadata/world_resynth_normal_manifest.csv`
+- QC: 저장 후 읽기·유한값 검사만 통과. 청취는 3~5개 표본 예정.
