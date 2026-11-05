@@ -1,18 +1,21 @@
 """synthetic_v2 에너지: 합성 v2 보통판의 말끝을 점점 작게 만들어 '작아짐' 짝을 만든다(같은 목소리·문장의 보통판이 '아님').
 지인 녹음의 작아짐처럼 문장 가운데쯤부터 작아지게 하고, 깊이는 지인 작아짐 크기(앞뒤 차이 중앙값 약 8 dB)에 맞춘다.
-사용: .venv\\Scripts\\python src\\v2\\fade_v2.py
+사용: .venv\\Scripts\\python src\\v2\\fade_v2.py [strong]
+strong은 v1처럼 말소리 처음부터 끝까지 12~18 dB 작아지게 만들어 synthetic_v2/energy_strong에 둔다(말끝만 약하게 만든 판이 v1보다 못해서 비교용).
 """
 import csv
 import random
+import sys
 from pathlib import Path
 
 import numpy as np
 import soundfile as sf
 
 SRC = Path(r"G:\내 드라이브\tts_dataset\synthetic_v2\full")
-OUT = Path(r"G:\내 드라이브\tts_dataset\synthetic_v2\energy")
-DEPTH_DB = (10, 18)  # 말끝에서 줄이는 양. 앞 1/3과 뒤 1/3 차이가 지인 작아짐(10~90% = 3~12 dB)과 비슷해지는 범위
-START = (0.3, 0.5)  # 말소리 구간의 이 위치부터 작아지기 시작
+STRONG = "strong" in sys.argv
+OUT = Path(r"G:\내 드라이브\tts_dataset\synthetic_v2") / ("energy_strong" if STRONG else "energy")
+DEPTH_DB = (12, 18) if STRONG else (10, 18)  # 기본은 앞 1/3과 뒤 1/3 차이가 지인 작아짐(10~90% = 3~12 dB)과 비슷해지는 범위
+START = (0.0, 0.1) if STRONG else (0.3, 0.5)  # 말소리 구간의 이 위치부터 작아지기 시작
 
 
 def speech_range(y, sr):
